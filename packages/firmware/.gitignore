@@ -1,0 +1,10 @@
+# PlatformIO build output & downloaded libraries
+.pio/
+
+# VS Code files but keep extensions.json
+.vscode/*
+!.vscode/extensions.json
+
+
+# Secrets (WiFi passwords, API keys, etc.)
+include/secrets.h
