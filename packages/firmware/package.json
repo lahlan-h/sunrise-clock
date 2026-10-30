@@ -1,0 +1,12 @@
+{
+  "name": "@sunrise-clock/firmware",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "pio run",
+    "build": "pio run",
+    "upload": "pio run --target upload",
+    "monitor": "pio device monitor",
+    "clean": "pio run --target clean"
+  }
+}
