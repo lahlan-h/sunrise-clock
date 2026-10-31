@@ -1,11 +1,11 @@
 #include "Mp3Player.h"
 
+#include <DFRobotDFPlayerMini.h>
+
 static HardwareSerial mp3Serial(2);
 static DFRobotDFPlayerMini player;
 
-namespace {
-
-const char *const songNames[Mp3Player::trackCount] = {
+static const char* songNames[15] = {
   "Help Herself",
   "Ingydar",
   "Paranoid",
@@ -23,8 +23,6 @@ const char *const songNames[Mp3Player::trackCount] = {
   "Chickens"
 };
 
-}
-
 Mp3Player::Mp3Player(uint8_t rxPin, uint8_t txPin) 
 : rxPin(rxPin), txPin(txPin) {}
 
@@ -32,7 +30,6 @@ void Mp3Player::begin() {
   mp3Serial.begin(9600, SERIAL_8N1, rxPin, txPin);
   player.begin(mp3Serial);
   player.volume(30);
-
 }
 
 void Mp3Player::play(uint16_t track) {
@@ -44,9 +41,6 @@ uint8_t Mp3Player::getTrackCount() const {
 }
 
 const char* Mp3Player::getSongName(uint8_t trackIndex) const {
-  if (trackIndex >= trackCount) {
-    return "";
-  }
-
+  if (trackIndex < trackCount - 1 || trackIndex > trackCount - 1) return;
   return songNames[trackIndex];
 }
