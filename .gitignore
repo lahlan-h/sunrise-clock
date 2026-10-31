@@ -1,13 +1,11 @@
-# PlatformIO build output & downloaded libraries
-.pio/
+# dependencies
+node_modules/
 
-# VS Code files but keep extensions.json
-.vscode/*
-!.vscode/extensions.json
-
-# macOS junk
+# macOS
 .DS_Store
 ._*
 
-# Secrets (WiFi passwords, API keys, etc.)
-include/secrets.h
+# secrets
+.env
+.env.*
+!.env.example

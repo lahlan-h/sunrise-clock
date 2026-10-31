@@ -1,6 +1,5 @@
 #include "LightArray.h"
 
-
 LightArray::LightArray(uint8_t pin, uint16_t count)
 : strip(count, pin, NEO_GRB + NEO_KHZ800) {}
 

@@ -1,0 +1,25 @@
+{
+  "name": "sunrise-clock",
+  "version": "0.0.0",
+  "description": "A sunrise alarm clock for 48033 Internet of Things",
+  "private": true,
+  "type": "module",
+  "packageManager": "npm@11.20.0",
+  "devDependencies": {
+    "turbo": "^2.10.2"
+  },
+  "dependencies": {
+    "node": "^26.12.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lahlan-h/sunrise-clock.git"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "contributors": [
+    "lahlan-h",
+    "katia"
+  ]
+}
