@@ -17,7 +17,7 @@ class OledScreen {
 
   private:
     static constexpr uint8_t rowHeight = 11;
-    static constexpr uint8_t visibleRows = 5;
+    static constexpr uint8_t visibleRows = 6;
 
     U8G2_SH1106_128X64_NONAME_F_HW_I2C display;
     uint8_t sdaPin;

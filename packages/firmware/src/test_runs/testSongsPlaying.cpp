@@ -12,7 +12,7 @@ namespace {
 
 constexpr uint8_t encoderButtonPin = 25;
 constexpr unsigned long buttonDebounceMs = 35;
-constexpr uint8_t visibleRows = 5;
+constexpr uint8_t visibleRows = 6;
 
 OledScreen screen(21, 22, 0x3C); //sda, scl, address
 RotaryEncoder encoder(32, 33);
