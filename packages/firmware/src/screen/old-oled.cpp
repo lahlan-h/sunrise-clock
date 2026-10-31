@@ -19,21 +19,21 @@ constexpr uint8_t rowHeight = 11;
 constexpr uint8_t visibleRows = 5;
 constexpr unsigned long buttonDebounceMs = 35;
 
-const char *const songNames[trackCount] = {
-  "HelpHerself",
+const char *const songNames[trackCount] = { //to mp3 player
+  "Help Herself",
   "Ingydar",
   "Paranoid",
-  "GoingUpTheCountry",
+  "Going Up The Country",
   "Fuel",
   "Rhiannon",
-  "RockinRobin",
-  "WelcomeToTheJungle",
+  "Rockin' Robin",
+  "Welcome To The Jungle",
   "Chickens",
   "Samsung",
-  "MachineGun",
-  "Trumpters",
-  "TarnadoSiren",
-  "BeepBeep"
+  "Machine Gun",
+  "Trumptets",
+  "Tornado Siren",
+  "Beep Beep"
 };
 
 U8G2_SH1106_128X64_NONAME_F_HW_I2C display(U8G2_R0, U8X8_PIN_NONE);
