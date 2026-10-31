@@ -8,9 +8,9 @@ LightArray lights(4, 8);// (pin, #LEDs)
 
 void setup(){
   lights.begin();
-  lights.startSunrise(10000); // 10 seconds
+  // lights.startSunrise(10000); // 10 seconds
   mp3.begin();
-  mp3.play(1); // Play track 1
+  // mp3.play(1); // Play track 1
 }
 
 void loop(){
@@ -20,5 +20,5 @@ void loop(){
 
 
 
-  lights.update();
+  //lights.update();
 }
