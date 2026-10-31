@@ -14,12 +14,13 @@ const char *const songNames[Mp3Player::trackCount] = {
   "Rhiannon",
   "Rockin' Robin",
   "Welcome To The Jungle",
-  "Chickens",
+  "Guten Morgen Sonnenschein",
   "Samsung",
   "Machine Gun",
   "Trumptets",
   "Tornado Siren",
-  "Beep Beep"
+  "Beep Beep",
+  "Chickens"
 };
 
 }

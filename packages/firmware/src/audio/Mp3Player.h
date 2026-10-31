@@ -5,7 +5,7 @@
 
 class Mp3Player {
   public:
-    static constexpr uint8_t trackCount = 14;
+    static constexpr uint8_t trackCount = 15;
 
     Mp3Player(uint8_t rxPin, uint8_t txPin);
     void begin();
