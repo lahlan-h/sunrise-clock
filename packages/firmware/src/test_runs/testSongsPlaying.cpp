@@ -3,26 +3,35 @@
 #include <Arduino.h>
 
 #include "audio/Mp3Player.h"
+#include "input/DHTSensor.h"
 #include "input/PushButton.h"
 #include "input/RotaryEncoder.h"
+#include "light/LightArray.h"
 #include "screen/oledScreen.h"
 
 extern Mp3Player mp3;
+extern LightArray lights;
+extern DHTSensor dhtSensor;
 
 namespace {
 
 constexpr uint8_t encoderButtonPin = 25;
+constexpr uint8_t pauseButtonPin = 13;
 constexpr uint16_t buttonDebounceMs = 35;
+constexpr unsigned long sensorLogIntervalMillis = 1000;
 constexpr uint8_t visibleRows = 5;
 constexpr uint8_t maxSongs = 32;
 
 OledScreen screen(21, 22, 0x3C); //sda, scl, address
 RotaryEncoder encoder(32, 33);
 PushButton button(encoderButtonPin, buttonDebounceMs);
+PushButton pauseButton(pauseButtonPin, buttonDebounceMs);
 
 uint8_t selectedSong = 0;
 uint8_t firstVisibleSong = 0;
 bool wasButtonPushed = false;
+bool wasPauseButtonPushed = false;
+unsigned long lastSensorLogMillis = 0;
 
 void drawSongList() {
   const uint8_t songCount = mp3.getTrackCount();
@@ -71,6 +80,15 @@ void playSelectedSong() {
   wasButtonPushed = isButtonPushed;
 }
 
+void pauseMusic() {
+  const bool isPauseButtonPushed = pauseButton.getIsPushed();
+  if (isPauseButtonPushed && !wasPauseButtonPushed) {
+    mp3.pause();
+  }
+
+  wasPauseButtonPushed = isPauseButtonPushed;
+}
+
 }
 
 void testSongsPlayingBegin() {
@@ -78,6 +96,7 @@ void testSongsPlayingBegin() {
 
   encoder.begin();
   button.begin();
+  pauseButton.begin();
 
   drawSongList();
 }
@@ -87,4 +106,20 @@ void testSongsPlayingUpdate() {
   updateSelection();
   button.update();
   playSelectedSong();
+  pauseButton.update();
+  pauseMusic();
+
+  lights.update();
+
+  dhtSensor.update();
+
+  const unsigned long currentMillis = millis();
+  if (currentMillis - lastSensorLogMillis >= sensorLogIntervalMillis) {
+    lastSensorLogMillis = currentMillis;
+    Serial.print("Temperature: ");
+    Serial.print(dhtSensor.getTemperature());
+    Serial.print(" °C, Humidity: ");
+    Serial.print(dhtSensor.getHumidity());
+    Serial.println(" %");
+  }
 }

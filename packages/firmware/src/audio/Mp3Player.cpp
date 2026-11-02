@@ -36,6 +36,10 @@ void Mp3Player::play(uint16_t track) {
   player.play(track);
 }
 
+void Mp3Player::pause() {
+  player.pause();
+}
+
 uint8_t Mp3Player::getTrackCount() const {
   return trackCount;
 }
