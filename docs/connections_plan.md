@@ -26,18 +26,20 @@ it must not replace the local alarm or light-control logic.
 ## Required outcomes
 
 1. [ ] Every input and light peripheral can expose a current, named value
-    through a common device-state/telemetry model. `DeviceState` currently only
-    contains alarm, connection, display, and basic light fields.
+    through a common device-state/telemetry model. The current model includes
+    calibrated ambient light, motion, DHT readings, light output, display
+    state, and connection status.
 2. [ ] A nearby phone can connect to the ESP32 over BLE, read status, receive
     live updates, and configure values such as the alarm time. `BLEConnection`
-    implements the transport and validation, but commands are not applied by
-    the application and the documented UUIDs do not match the firmware UUIDs.
+    implements the transport and validation, but commands are not yet applied
+    by the application.
 3. [ ] The ESP32 can join Wi-Fi, recover from a dropped connection, and
     maintain an authenticated MQTT connection. Wi-Fi setup and an MQTT wrapper
     exist, but recovery and MQTT wiring are incomplete.
 4. [ ] Meaningful peripheral data is published as MQTT telemetry, consumed by
-    Telegraf, stored in InfluxDB, and displayed in Grafana. No telemetry
-    publisher or cloud configuration is present.
+    Telegraf, stored in InfluxDB, and displayed in Grafana. The firmware
+    telemetry publisher is present; cloud configuration and end-to-end
+    verification remain incomplete.
 5. [ ] MQTT commands can be received for non-time-critical remote configuration
     or control, while safety- and timing-sensitive behavior continues locally.
     MQTT command parsing and queuing exist, but there is no application command
@@ -56,7 +58,8 @@ The firmware already has:
   motion sensor, and DHT sensor;
 - a `LightArray` output class and `DeviceState`;
 - a substantially implemented `BLEConnection`, an incomplete
-  `WiFiConnection`, and an MQTT wrapper that is not wired into `main.cpp`;
+  `WiFiConnection`, an MQTT wrapper wired into `main.cpp`, and a telemetry
+  publisher;
 - local time synchronization in `WiFiConnection`.
 
 The connection plan should extend these existing patterns rather than make
@@ -69,24 +72,27 @@ individual peripheral classes know about BLE, MQTT, or cloud storage.
 Update the state model first so all communication layers consume the same
 source of truth.
 
-Status: `Partial`. Alarm, time, connection, basic light fields, and the
-current sensor/input snapshot now exist in `DeviceState`. Device identity,
-firmware version, error counters, configuration source, and acknowledgement
-state remain future additions.
+Status: `Implemented for the current communication scope`. Alarm, time,
+connection, DHT validity, actuator output, device identity, firmware
+version, and Wi-Fi health fields are represented in `DeviceState`. Error
+counters, configuration source, and acknowledgement state remain future
+additions.
 
 Proposed responsibilities:
 
 - Store alarm configuration: enabled flag, hour, minute, and any repeat mode.
 - Store current clock/time-sync status and connection health.
-- Store the latest valid reading and validity/status for every input.
+- Store the latest readings. DHT temperature and humidity have explicit
+  validity flags; other simple peripheral values are published directly.
 - Store light state such as on/off, brightness, colour/mode, and active pattern.
 - Store device identity, firmware version, uptime, and error counters.
 - Track the source and acknowledgement status of configuration changes where
   useful (`local_ble`, `mqtt`, or `physical_control`).
 
-Prefer typed fields and explicit validity flags over sentinel values. The model
+Prefer typed fields and keep the model simple for this project. The model
 should be serializable by both BLE and MQTT adapters without exposing hardware
-pins or driver-specific details.
+pins or driver-specific details. Only DHT validity is part of the telemetry
+contract.
 
 Potential additions:
 
@@ -100,12 +106,11 @@ These can remain small value types if adding separate files is not justified.
 
 ### 2. Peripheral value adapters
 
-Status: `Partial`. Hardware classes expose the accessors needed by the
-current telemetry snapshot. `LightArray` still needs output-state accessors
-for complete actuator telemetry.
+Status: `Implemented for the current telemetry scope`. Hardware classes expose
+the accessors needed by the current telemetry snapshot.
 
-- [ ] Add stable field names, units, expected ranges, sampling periods, and
-  invalid/stale behavior for every value.
+- [x] Add stable field names, units, expected ranges, sampling periods, and
+  simple value behavior for the selected telemetry fields.
 - [x] Copy peripheral values into `DeviceState` through
   `DeviceStateUpdater`.
 - [ ] Keep connectivity classes reading the state model rather than GPIO or
@@ -115,7 +120,7 @@ Keep the existing hardware classes responsible for hardware access:
 
 | Existing class | Values to expose |
 |---|---|
-| `PhotoResistor` | raw value and calibrated light level |
+| `PhotoResistor` | calibrated light level (percent); raw ADC is not published |
 | `MotionSensor` | motion state |
 | `DHTSensor` | temperature, humidity, and validity |
 | `LightArray` | output state, brightness/colour/mode |
@@ -131,12 +136,12 @@ connectivity wrappers, and sensor/input peripherals. Its non-blocking
 `update()` method synchronizes Wi-Fi and BLE status, DHT readings and
 validity, ambient light, motion, button, and rotary position.
 
-The setup phase should define, for every value:
+The setup phase should define, for every published value:
 
 - stable field name;
 - unit and expected range;
 - sampling/update period;
-- invalid/stale behavior;
+- DHT invalid behavior where applicable;
 - whether it is telemetry-only or can also be commanded.
 
 ### 3. `BLEConnection`
@@ -173,12 +178,12 @@ The firmware uses the following versioned service and characteristic UUIDs:
 
 | UUID | Characteristic |
 |---|---|
-| `6e400001-b5a3-f393-e0a9-e50e24dcca9e` | service |
-| `6e400002-b5a3-f393-e0a9-e50e24dcca9e` | status |
-| `6e400003-b5a3-f393-e0a9-e50e24dcca9e` | alarm configuration |
-| `6e400004-b5a3-f393-e0a9-e50e24dcca9e` | light control |
-| `6e400005-b5a3-f393-e0a9-e50e24dcca9e` | device information |
-| `6e400006-b5a3-f393-e0a9-e50e24dcca9e` | command acknowledgement |
+| `75c3662a-606b-417c-a9a2-3f268ef96579` | service |
+| `b707bc8f-92f4-4f46-81c2-a34788fd7382` | status |
+| `0a8b765b-73ac-4813-8441-dbe23e992974` | alarm configuration |
+| `7292c4d1-c619-4075-8954-0535d9d1aebf` | light control |
+| `3f52dc07-56d2-4141-b8fa-f7355972d74e` | device information |
+| `804687da-761a-42ec-b67b-a4c635ef9f85` | command acknowledgement |
 
 Use compact JSON with `protocol_version: 1`. Alarm writes contain
 `command_id`, `enabled`, `hour` (`0..23`), and `minute` (`0..59`). Light
@@ -211,8 +216,9 @@ provide the network readiness required by `MQTTConnection`.
 
 Status: `Partial`. `MQTTConnection` exists with topic construction, Wi-Fi
 gating, reconnect backoff, command subscription, payload-size/protocol/range
-validation, command queuing, acknowledgements, and publish methods. It is not
-constructed or updated by `main.cpp`, and it has no telemetry/state producer.
+validation, command queuing, acknowledgements, and publish methods. It is
+constructed and updated by `main.cpp`; application command routing and full
+Wi-Fi recovery remain incomplete.
 
 Create a dedicated MQTT wrapper, for example:
 
@@ -230,7 +236,7 @@ Proposed responsibilities:
 - resubscribe to command topics after every reconnect;
 - validate topic, payload size, protocol version, and command shape;
 - enqueue accepted commands for application processing;
-- publish connection/health events without blocking sensing.
+- publish simple telemetry without blocking sensing.
 
 Use a unique device ID in the client ID and topic namespace. Keep broker
 credentials in the ignored secrets/configuration path.
@@ -246,16 +252,18 @@ not coupled.
 Proposed responsibilities:
 
 - take a snapshot from `DeviceState`;
-- serialize stable JSON with meaningful sensor and actuator fields;
+- serialize simple, stable JSON with meaningful sensor and actuator fields;
 - publish at a scheduled interval and when important state changes;
-- publish only valid values, or include explicit validity fields;
+- include DHT temperature/humidity validity only;
 - include `device_id`, `location` (if used), protocol version, and state;
 - publish health data such as uptime, RSSI, and connection status;
 - record publish failures for diagnostics.
 
 The firmware publishes immediately after the MQTT connection becomes
-available when state changes, and otherwise on a 30-second interval. Invalid
+available when state changes, and otherwise every 120 seconds by default.
+The interval is configured in `MQTTConnection`, not in `secrets.h`. Invalid
 DHT readings are represented by `null` values with explicit validity fields.
+Other peripheral values do not have separate validity fields.
 
 The first payload should cover all meaningful project data, for example:
 
@@ -397,24 +405,42 @@ to MQTT, Telegraf, InfluxDB, and a Grafana panel.
 
 ### Phase 1: Define contracts
 
-- [ ] Agree on `DeviceState` fields and validity rules.
+- [x] Agree on `DeviceState` fields and validity rules.
 - [x] Assign a device identity and protocol version.
-- [ ] Reconcile and finalize BLE UUIDs and characteristic formats.
+- [x] Reconcile and finalize BLE UUIDs and characteristic formats.
 - [x] Define MQTT topics and command schema.
-- [ ] Define the complete telemetry schema, units, ranges, and update periods.
+- [x] Define the complete telemetry schema, units, ranges, and update periods.
+
+The agreed contract uses the UUIDs and protocol version already implemented by
+`BLEConnection`. MQTT telemetry is intentionally simple: it includes
+temperature and humidity with DHT-only validity fields, calibrated ambient
+light percentage, motion state, light output state/brightness/mode, display
+state, and relevant alarm and connection status. Raw photoresistor ADC values
+and validity fields for non-DHT peripherals are not published. Telemetry is
+published on important state changes and every 120 seconds by default.
 
 ### Phase 2: Prepare configuration
 
 - [x] Add non-secret broker and device configuration defaults.
-- [ ] Extend the ignored secrets example with Wi-Fi, BLE, MQTT, and Influx/Telegraf
+- [x] Extend the ignored secrets example with Wi-Fi, BLE, MQTT, and Influx/Telegraf
   deployment notes as appropriate;
 - [x] Verify that credentials are not committed.
-- [ ] Choose and verify whether the broker uses TLS for the target deployment.
+- [x] Choose and verify whether the broker uses TLS for the target deployment.
+
+The current target is plain MQTT on the trusted local lab network. The
+configuration retains `MQTT_USE_TLS` and `MQTT_ROOT_CERTIFICATE` so a later
+deployment can enable TLS without changing the MQTT class interface. The
+telemetry interval is configured through
+`MQTTConnection::DEFAULT_TELEMETRY_INTERVAL_MS`, alongside the MQTT transport
+configuration rather than the secrets file.
+`secrets.h` is intentionally local-only and is excluded by `.gitignore`, as
+confirmed during implementation. A repository-history audit is still prudent
+before publishing the repository.
 
 ### Phase 3: Prepare the firmware class interfaces
 
-- [ ] Add the telemetry/configuration value types.
-- [ ] Add read accessors or snapshots to all required peripheral classes.
+- [x] Add the telemetry/configuration value types.
+- [x] Add read accessors or snapshots to all required peripheral classes.
 - [x] Expand `BLEConnection` and add the initial `WiFiConnection` interface.
 - [x] Add the `MQTTConnection` header.
 - [x] Add the `TelemetryPublisher` header and implementation. `CommandRouter`
@@ -423,6 +449,10 @@ to MQTT, Telegraf, InfluxDB, and a Grafana panel.
   `main.cpp`.
 - [x] Define the connection lifecycle abstraction in `include/Connections.h`.
 - [x] Define connection ownership and update order in `main.cpp`.
+
+`DeviceStateUpdater` now owns the snapshot boundary for sensor, input, Wi-Fi
+health, and `LightArray` output values. Connectivity adapters consume this
+state rather than reading peripheral drivers directly.
 
 ### Phase 4: Integrate local communication
 
@@ -478,8 +508,8 @@ The setup phase is not complete. Current status:
 
 - [ ] The class boundaries and ownership described above are agreed and
   represented by firmware headers/stubs where required.
-- [ ] Every peripheral has a documented value, unit, validity rule, and update
-  owner.
+- [ ] Every peripheral has a documented value, unit, update owner, and simple
+  telemetry behavior; only DHT readings require validity fields.
 - [ ] BLE UUIDs, characteristic permissions, and command validation rules are
   consistent between documentation and firmware.
 - [ ] MQTT topics and the versioned telemetry schema are documented and

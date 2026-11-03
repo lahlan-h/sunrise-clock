@@ -17,6 +17,7 @@ void LightArray::update(){
 
   strip.fill(sunriseColour(progress));
   strip.show();
+  on = true;
 }
 
 void LightArray::startSunrise(unsigned long ms){
@@ -27,12 +28,25 @@ void LightArray::startSunrise(unsigned long ms){
 
 void LightArray::off(){
   running = false;
+  on = false;
   strip.clear();
   strip.show();
 }
 
 bool LightArray::isRunning(){
   return running;
+}
+
+bool LightArray::isOn() const {
+  return on;
+}
+
+uint8_t LightArray::getBrightnessPercent() const {
+  return on ? 100 : 0;
+}
+
+const char* LightArray::getMode() const {
+  return running ? "SUNRISE" : (on ? "STEADY" : "OFF");
 }
 
 uint8_t lerp(uint8_t a, uint8_t b, float t) {

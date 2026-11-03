@@ -16,12 +16,14 @@ struct DeviceState {
   tm currentTime = {};
   Screen screen = Screen::Home;
 
-  char* ssid = "";
-  char* ble_advertiser_name = "";
+  const char* ssid = "";
+  const char* ble_advertiser_name = "";
+  const char* firmwareVersion = "1.0.0";
 
   float temperatureC = NAN;
   float humidityPercent = NAN;
   int ambientLightPercent = 0;
+  int16_t wifiRssi = 0;
   bool motionDetected = false;
   bool buttonPressed = false;
   int32_t rotaryPosition = 0;
@@ -34,6 +36,7 @@ struct DeviceState {
   uint8_t alarmMinute = 0;
   bool lightOn = false;
   uint8_t lightBrightnessPercent = 0;
+  const char* lightMode = "OFF";
   bool isSoundOn = true;
   bool isTimeSynced = false;
 };

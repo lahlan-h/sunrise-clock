@@ -8,7 +8,7 @@ class MQTTConnection;
 
 class TelemetryPublisher {
   public:
-    static constexpr uint32_t DEFAULT_INTERVAL_MS = 30000;
+    static constexpr uint32_t DEFAULT_INTERVAL_MS = 120000;
     static constexpr size_t MAX_PAYLOAD_SIZE = 768;
 
     TelemetryPublisher(

@@ -104,10 +104,12 @@ bool TelemetryPublisher::buildPayload(
       "{\"protocol_version\":%u,\"device_id\":\"%s\",\"location\":\"%s\","
       "\"temperature_c\":%s,\"temperature_valid\":%s,"
       "\"humidity_percent\":%s,\"humidity_valid\":%s,"
-      "\"ambient_light_percent\":%d,\"motion\":%s,\"button_pressed\":%s,"
+      "\"ambient_light_percent\":%d,"
+      "\"motion\":%s,\"button_pressed\":%s,"
       "\"rotary_position\":%ld,\"alarm_enabled\":%s,\"alarm_hour\":%u,"
       "\"alarm_minute\":%u,\"light_on\":%s,\"light_brightness_percent\":%u,"
-      "\"sound_on\":%s,\"screen\":\"%s\",\"wifi_connected\":%s,"
+      "\"light_mode\":\"%s\",\"sound_on\":%s,\"screen\":\"%s\","
+      "\"wifi_connected\":%s,\"wifi_rssi\":%d,"
       "\"ble_connected\":%s,\"time_synced\":%s,\"uptime_ms\":%lu}",
       MQTTConnection::PROTOCOL_VERSION,
       deviceId,
@@ -125,9 +127,11 @@ bool TelemetryPublisher::buildPayload(
       state.alarmMinute,
       state.lightOn ? "true" : "false",
       state.lightBrightnessPercent,
+      state.lightMode == nullptr ? "UNKNOWN" : state.lightMode,
       state.isSoundOn ? "true" : "false",
       screenName(state.screen),
       state.isWifiConnected ? "true" : "false",
+      state.wifiRssi,
       state.isBluetoothConnected ? "true" : "false",
       state.isTimeSynced ? "true" : "false",
       includeUptime ? millis() : 0UL);

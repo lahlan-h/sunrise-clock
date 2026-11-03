@@ -36,12 +36,16 @@ class LightArray : public Peripheral{
     void startSunrise(unsigned long durationMs);
     void off();
     bool isRunning();
+    bool isOn() const;
+    uint8_t getBrightnessPercent() const;
+    const char* getMode() const;
 
   private:
     Adafruit_NeoPixel strip;
     unsigned long startMs = 0;
     unsigned long durationMs = 0;
     bool running = false;
+    bool on = false;
 
     uint32_t sunriseColour(float progress);
 };

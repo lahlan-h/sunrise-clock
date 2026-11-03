@@ -39,10 +39,16 @@ MQTTConnection mqtt(
     MQTT_USERNAME,
     MQTT_PASSWORD,
     MQTT_DEVICE_ID,
-    MQTT_USE_TLS);
-TelemetryPublisher telemetry(mqtt, deviceState, MQTT_DEVICE_ID);
+    MQTT_USE_TLS,
+    MQTT_ROOT_CERTIFICATE);
+TelemetryPublisher telemetry(
+    mqtt,
+    deviceState,
+    MQTT_DEVICE_ID,
+    nullptr,
+    MQTTConnection::DEFAULT_TELEMETRY_INTERVAL_MS);
 DeviceStateUpdater stateUpdater(
-    deviceState, wifi, ble, dht, ldr, pir, buttonA, rotary);
+    deviceState, wifi, ble, dht, ldr, pir, buttonA, rotary, lights);
 
 Peripheral* peripherals[] = {&rotary, &buttonA, &ldr, &pir, &dht, &lights, &oled } ;
 Connections* connections[] = {&wifi, &ble, &mqtt};
@@ -55,11 +61,11 @@ void setup(){
   mp3.begin();
 
   // Initialise Connections
-  deviceState.ble_advertiser_name = const_cast<char *>(BLE_ADVERTISER_NAME);
+  deviceState.ble_advertiser_name = BLE_ADVERTISER_NAME;
   for(Connections* connection : connections) connection->begin();
 
   // Populate DeviceState struct with as much informaton as we know right now
-  deviceState.ssid = const_cast<char *>(WIFI_SSID);
+  deviceState.ssid = WIFI_SSID;
   deviceState.isWifiConnected = wifi.isConnected();
   deviceState.isTimeSynced = wifi.getTime(deviceState.currentTime);
   telemetry.begin();

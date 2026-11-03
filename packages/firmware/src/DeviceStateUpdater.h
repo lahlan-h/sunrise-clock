@@ -8,6 +8,7 @@
 #include "sensor/PhotoResistor.h"
 #include "connectivity/BLEConnection.h"
 #include "connectivity/WiFiConnection.h"
+#include "light/LightArray.h"
 
 class DeviceStateUpdater {
   public:
@@ -19,7 +20,8 @@ class DeviceStateUpdater {
         PhotoResistor& ldr,
         MotionSensor& pir,
         PushButton& button,
-        RotaryEncoder& rotary);
+        RotaryEncoder& rotary,
+        LightArray& lights);
 
     void update();
 
@@ -32,4 +34,5 @@ class DeviceStateUpdater {
     MotionSensor& pir;
     PushButton& button;
     RotaryEncoder& rotary;
+    LightArray& lights;
 };

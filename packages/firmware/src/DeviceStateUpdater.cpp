@@ -10,7 +10,8 @@ DeviceStateUpdater::DeviceStateUpdater(
     PhotoResistor& ldr,
     MotionSensor& pir,
     PushButton& button,
-    RotaryEncoder& rotary)
+    RotaryEncoder& rotary,
+    LightArray& lights)
     : state(state),
       wifi(wifi),
       ble(ble),
@@ -18,7 +19,8 @@ DeviceStateUpdater::DeviceStateUpdater(
       ldr(ldr),
       pir(pir),
       button(button),
-      rotary(rotary) {}
+      rotary(rotary),
+      lights(lights) {}
 
 void DeviceStateUpdater::update() {
   state.isWifiConnected = wifi.isConnected();
@@ -32,5 +34,9 @@ void DeviceStateUpdater::update() {
   state.motionDetected = pir.isMotionDetected();
   state.buttonPressed = button.getIsPushed();
   state.rotaryPosition = rotary.getClicksSinceReset();
+  state.lightOn = lights.isOn();
+  state.lightBrightnessPercent = lights.getBrightnessPercent();
+  state.lightMode = lights.getMode();
   state.isBluetoothConnected = ble.isConnected();
+  state.wifiRssi = state.isWifiConnected ? WiFi.RSSI() : 0;
 }

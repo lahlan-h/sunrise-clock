@@ -14,6 +14,7 @@ class MQTTConnection : public Connections {
     static constexpr uint8_t PROTOCOL_VERSION = 1;
     static constexpr size_t MAX_PAYLOAD_SIZE = 768;
     static constexpr uint8_t COMMAND_QUEUE_CAPACITY = 4;
+    static constexpr uint32_t DEFAULT_TELEMETRY_INTERVAL_MS = 120000;
 
     MQTTConnection(
         WiFiConnection& wifi,

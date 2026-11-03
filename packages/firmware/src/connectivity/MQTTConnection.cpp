@@ -147,8 +147,8 @@ bool MQTTConnection::popCommand(BLECommand& command) {
   if (queueSize == 0) {
     return false;
   }
-  command = commandQueue[queueTail];
-  queueTail = (queueTail + 1) % COMMAND_QUEUE_CAPACITY;
+  command = commandQueue[(queueHead + COMMAND_QUEUE_CAPACITY - queueSize) %
+                         COMMAND_QUEUE_CAPACITY];
   --queueSize;
   return true;
 }
