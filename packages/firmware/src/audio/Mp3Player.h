@@ -20,7 +20,7 @@ class Mp3Player {
     static constexpr uint8_t songsFolder = 1;
     static constexpr uint8_t effectsFolder = 2;
     static constexpr uint8_t songCount = 15;
-    static constexpr uint8_t effectCount = 5;
+    static constexpr uint8_t effectCount = 6;
     uint8_t rxPin, txPin;
 };
 

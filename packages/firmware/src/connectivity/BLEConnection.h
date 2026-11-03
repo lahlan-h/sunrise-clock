@@ -4,6 +4,8 @@
 
 #include <Connections.h>
 
+#include "audio/Mp3Player.h"
+
 struct DeviceState;
 
 enum class BLECommandType : uint8_t {
@@ -31,7 +33,7 @@ class BLEConnection : public Connections {
     static constexpr char DEVICE_INFO_UUID[] = "3f52dc07-56d2-4141-b8fa-f7355972d74e";
     static constexpr char ACK_UUID[] = "804687da-761a-42ec-b67b-a4c635ef9f85";
 
-    BLEConnection(const char* deviceName, DeviceState& state);
+    BLEConnection(const char* deviceName, DeviceState& state, Mp3Player& mp3);
 
     void begin() override;
     void update() override;
@@ -50,6 +52,7 @@ class BLEConnection : public Connections {
 
     const char* deviceName;
     DeviceState& state;
+    Mp3Player& mp3;
     void* server;
     void* statusCharacteristic;
     void* alarmConfigCharacteristic;
