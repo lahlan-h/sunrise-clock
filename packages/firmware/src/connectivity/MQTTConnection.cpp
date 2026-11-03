@@ -28,13 +28,8 @@ MQTTConnection::MQTTConnection(
       clientId(String("sunrise-clock-") + (deviceId == nullptr ? "" : deviceId)),
       telemetryTopicName(String("sunrise-clock/") +
                          (deviceId == nullptr ? "" : deviceId) + "/telemetry"),
-      stateTopicName(String("sunrise-clock/") +
-                     (deviceId == nullptr ? "" : deviceId) + "/state"),
       commandTopicName(String("sunrise-clock/") +
-                       (deviceId == nullptr ? "" : deviceId) + "/command"),
-      acknowledgementTopicName(
-          String("sunrise-clock/") +
-          (deviceId == nullptr ? "" : deviceId) + "/command/ack") {}
+                       (deviceId == nullptr ? "" : deviceId) + "/command") {}
 
 void MQTTConnection::begin() {
   if (host == nullptr || host[0] == '\0' || deviceId == nullptr ||
@@ -124,30 +119,6 @@ bool MQTTConnection::publishTelemetry(const char* payload, bool retained) {
   return true;
 }
 
-void MQTTConnection::acknowledgeCommand(
-    const char* commandId, bool accepted, const char* message) {
-  acknowledge(commandId, accepted, message);
-}
-
-bool MQTTConnection::publishState(const char* payload, bool retained) {
-  if (!mqttClient.connected() || payload == nullptr ||
-      strlen(payload) >= MAX_PAYLOAD_SIZE) {
-    ++publishFailures;
-    setError("state_publish_rejected");
-    return false;
-  }
-  if (!mqttClient.publish(stateTopicName.c_str(), payload, retained)) {
-    ++publishFailures;
-    setError("state_publish_failed");
-    return false;
-  }
-  return true;
-}
-
-bool MQTTConnection::hasPendingCommand() const {
-  return queueSize != 0;
-}
-
 bool MQTTConnection::popCommand(BLECommand& command) {
   if (queueSize == 0) {
     return false;
@@ -162,16 +133,8 @@ const char* MQTTConnection::telemetryTopic() const {
   return telemetryTopicName.c_str();
 }
 
-const char* MQTTConnection::stateTopic() const {
-  return stateTopicName.c_str();
-}
-
 const char* MQTTConnection::commandTopic() const {
   return commandTopicName.c_str();
-}
-
-const char* MQTTConnection::acknowledgementTopic() const {
-  return acknowledgementTopicName.c_str();
 }
 
 const char* MQTTConnection::lastError() const {
@@ -198,11 +161,8 @@ void MQTTConnection::handleMessage(const char* topic, const byte* payload,
   BLECommand command = {};
   if (parseCommand(reinterpret_cast<const char*>(payload), length, command) &&
       enqueue(command)) {
-    acknowledge(command.commandId, true, "queued");
     return;
   }
-
-  acknowledge(command.commandId, false, "invalid_command");
 }
 
 bool MQTTConnection::enqueue(const BLECommand& command) {
@@ -329,19 +289,6 @@ bool MQTTConnection::readBoolean(const char* payload, size_t length,
     return true;
   }
   return false;
-}
-
-void MQTTConnection::acknowledge(const char* commandId, bool accepted,
-                                 const char* message) {
-  if (!mqttClient.connected() || commandId == nullptr) {
-    return;
-  }
-  char payload[160];
-  snprintf(payload, sizeof(payload),
-           "{\"protocol_version\":%u,\"command_id\":\"%s\","
-           "\"accepted\":%s,\"message\":\"%s\"}",
-           PROTOCOL_VERSION, commandId, accepted ? "true" : "false", message);
-  mqttClient.publish(acknowledgementTopicName.c_str(), payload);
 }
 
 void MQTTConnection::setError(const char* message) {

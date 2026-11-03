@@ -31,17 +31,11 @@ class MQTTConnection : public Connections {
 
     bool isConnected() const;
     bool publishTelemetry(const char* payload, bool retained = false);
-    bool publishState(const char* payload, bool retained = true);
 
-    bool hasPendingCommand() const;
     bool popCommand(BLECommand& command);
-    void acknowledgeCommand(
-        const char* commandId, bool accepted, const char* message);
 
     const char* telemetryTopic() const;
-    const char* stateTopic() const;
     const char* commandTopic() const;
-    const char* acknowledgementTopic() const;
     const char* lastError() const;
     uint32_t publishFailureCount() const;
 
@@ -61,12 +55,9 @@ class MQTTConnection : public Connections {
     PubSubClient mqttClient;
     String clientId;
     String telemetryTopicName;
-    String stateTopicName;
     String commandTopicName;
-    String acknowledgementTopicName;
     BLECommand commandQueue[COMMAND_QUEUE_CAPACITY];
     uint8_t queueHead = 0;
-    uint8_t queueTail = 0;
     uint8_t queueSize = 0;
     uint32_t nextReconnectAt = 0;
     uint32_t reconnectDelay = 1000;
@@ -84,6 +75,5 @@ class MQTTConnection : public Connections {
                      int& output) const;
     bool readBoolean(const char* payload, size_t length, const char* key,
                      bool& output) const;
-    void acknowledge(const char* commandId, bool accepted, const char* message);
     void setError(const char* message);
 };

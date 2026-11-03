@@ -35,9 +35,6 @@ void CommandRouter::apply(
       if (origin == CommandOrigin::Ble) {
         ble.acknowledgeCommand(
             command.commandId, false, "unsupported_light_mode");
-      } else {
-        mqtt.acknowledgeCommand(
-            command.commandId, false, "unsupported_light_mode");
       }
       return;
     }
