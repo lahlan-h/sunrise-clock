@@ -69,10 +69,10 @@ individual peripheral classes know about BLE, MQTT, or cloud storage.
 Update the state model first so all communication layers consume the same
 source of truth.
 
-Status: `Partial`. Alarm, time, connection, and basic light fields exist in
-`DeviceState`, but sensor snapshots, device identity, firmware version,
-uptime, error counters, validity flags, configuration source, and
-acknowledgement state are not represented.
+Status: `Partial`. Alarm, time, connection, basic light fields, and the
+current sensor/input snapshot now exist in `DeviceState`. Device identity,
+firmware version, error counters, configuration source, and acknowledgement
+state remain future additions.
 
 Proposed responsibilities:
 
@@ -100,14 +100,14 @@ These can remain small value types if adding separate files is not justified.
 
 ### 2. Peripheral value adapters
 
-Status: `Partial`. Several hardware classes have local accessors, and
-`main.cpp` updates the peripherals, but their values are not copied into
-`DeviceState` and `LightArray` has no telemetry snapshot/accessors.
+Status: `Partial`. Hardware classes expose the accessors needed by the
+current telemetry snapshot. `LightArray` still needs output-state accessors
+for complete actuator telemetry.
 
 - [ ] Add stable field names, units, expected ranges, sampling periods, and
   invalid/stale behavior for every value.
-- [ ] Copy peripheral values into `DeviceState` from `main.cpp` (or a
-  coordinator).
+- [x] Copy peripheral values into `DeviceState` through
+  `DeviceStateUpdater`.
 - [ ] Keep connectivity classes reading the state model rather than GPIO or
   driver internals.
 
@@ -122,9 +122,14 @@ Keep the existing hardware classes responsible for hardware access:
 | `OledScreen` | current screen or display mode if useful for status |
 
 Add clear read/accessor methods or a common snapshot method to these classes
-only where needed. `main.cpp` should periodically update the peripherals and
-copy their values into `DeviceState`; connectivity classes should read the
-state model, not GPIO or driver internals.
+only where needed. `main.cpp` updates the peripherals, while
+`DeviceStateUpdater` copies their values into `DeviceState`; connectivity
+classes read the state model, not GPIO or driver internals.
+
+`DeviceStateUpdater` is constructed with references to the shared state,
+connectivity wrappers, and sensor/input peripherals. Its non-blocking
+`update()` method synchronizes Wi-Fi and BLE status, DHT readings and
+validity, ambient light, motion, button, and rotary position.
 
 The setup phase should define, for every value:
 
@@ -335,8 +340,9 @@ method; serial output may remain as a development diagnostic interface.
 
 ### Global MQTT path
 
-Status: `Partial`. The MQTT wrapper uses the planned topic namespace, but no
-telemetry is published and no end-to-end command handling is connected.
+Status: `Partial`. The MQTT wrapper uses the planned topic namespace and is
+wired into the firmware lifecycle. `TelemetryPublisher` now publishes the
+state snapshot, but end-to-end command handling is not connected.
 
 ```text
 DeviceState
@@ -413,8 +419,10 @@ to MQTT, Telegraf, InfluxDB, and a Grafana panel.
 - [x] Add the `MQTTConnection` header.
 - [x] Add the `TelemetryPublisher` header and implementation. `CommandRouter`
   remains pending.
+- [x] Add `DeviceStateUpdater` to keep peripheral synchronization out of
+  `main.cpp`.
 - [x] Define the connection lifecycle abstraction in `include/Connections.h`.
-- [ ] Define final ownership and update order for all connections in `main.cpp`.
+- [x] Define connection ownership and update order in `main.cpp`.
 
 ### Phase 4: Integrate local communication
 
@@ -427,8 +435,8 @@ to MQTT, Telegraf, InfluxDB, and a Grafana panel.
 ### Phase 5: Integrate global communication
 
 - [ ] Complete Wi-Fi readiness and recovery.
-- [ ] Wire MQTT connection/reconnection/subscription handling into `main.cpp`.
-- [ ] Publish a real `DeviceState` snapshot.
+- [x] Wire MQTT connection/reconnection/subscription handling into `main.cpp`.
+- [x] Publish a real `DeviceState` snapshot.
 - [ ] Configure Telegraf and verify writes to InfluxDB.
 - [ ] Build Grafana panels from the stable measurement schema.
 
@@ -445,9 +453,9 @@ to MQTT, Telegraf, InfluxDB, and a Grafana panel.
 
 ## Main-loop integration order
 
-Status: `Partial`. Peripheral updates and connection updates run, but command
-queues, local application control, MQTT, and telemetry publishing are not
-processed in this order yet.
+Status: `Partial`. Peripheral updates, connection maintenance, state
+synchronization, and telemetry publishing are now processed in the main loop.
+Command queues and local application control still need to be added.
 
 The eventual loop should remain non-blocking and follow this order:
 
@@ -455,12 +463,14 @@ The eventual loop should remain non-blocking and follow this order:
 2. [ ] Update local state and apply local alarm/light control.
 3. [ ] Process queued BLE commands.
 4. [ ] Process queued MQTT commands.
-5. [ ] Run BLE and MQTT client maintenance.
-6. [ ] Publish scheduled or changed telemetry.
-7. [ ] Update display/diagnostic output.
+5. [x] Run BLE and MQTT client maintenance.
+6. [x] Synchronize peripheral values through `DeviceStateUpdater`.
+7. [x] Publish scheduled or changed telemetry through `TelemetryPublisher`.
+8. [ ] Update display/diagnostic output.
 
-No connection failure should prevent steps 1 or 2. Avoid long delays in
-connection callbacks, BLE callbacks, sensor reads, or MQTT serialization.
+No connection failure should prevent peripheral updates or state
+synchronization. Avoid long delays in connection callbacks, BLE callbacks,
+sensor reads, state synchronization, or MQTT serialization.
 
 ## Definition of done for the setup phase
 
