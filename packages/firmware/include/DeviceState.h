@@ -22,6 +22,10 @@ struct DeviceState {
   bool isWifiConnected = false;
   bool isBluetoothConnected = false;
   bool isAlarmSet = false;
+  uint8_t alarmHour = 0;
+  uint8_t alarmMinute = 0;
+  bool lightOn = false;
+  uint8_t lightBrightnessPercent = 0;
   bool isSoundOn = true;
   bool isTimeSynced = false;
 };
