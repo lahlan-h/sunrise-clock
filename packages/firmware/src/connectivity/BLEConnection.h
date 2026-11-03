@@ -2,6 +2,8 @@
 
 #include <Arduino.h>
 
+#include <Connections.h>
+
 struct DeviceState;
 
 enum class BLECommandType : uint8_t {
@@ -19,7 +21,7 @@ struct BLECommand {
   char lightMode[17] = {};
 };
 
-class BLEConnection {
+class BLEConnection : public Connections {
   public:
     static constexpr uint8_t PROTOCOL_VERSION = 1;
     static constexpr char SERVICE_UUID[] = "75c3662a-606b-417c-a9a2-3f268ef96579";
@@ -31,8 +33,8 @@ class BLEConnection {
 
     BLEConnection(const char* deviceName, DeviceState& state);
 
-    void begin();
-    void update();
+    void begin() override;
+    void update() override;
     bool isConnected() const;
 
     bool hasPendingCommand() const;

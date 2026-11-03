@@ -4,11 +4,12 @@
 #include <WiFiClientSecure.h>
 #include <PubSubClient.h>
 
+#include <Connections.h>
 #include "BLEConnection.h"
 
 class WiFiConnection;
 
-class MQTTConnection {
+class MQTTConnection : public Connections {
   public:
     static constexpr uint8_t PROTOCOL_VERSION = 1;
     static constexpr size_t MAX_PAYLOAD_SIZE = 512;
@@ -24,8 +25,8 @@ class MQTTConnection {
         bool useTls = false,
         const char* rootCertificate = nullptr);
 
-    void begin();
-    void update();
+    void begin() override;
+    void update() override;
 
     bool isConnected() const;
     bool publishTelemetry(const char* payload, bool retained = false);

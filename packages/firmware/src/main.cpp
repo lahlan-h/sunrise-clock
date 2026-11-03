@@ -1,6 +1,7 @@
 #include <Arduino.h>
 
 #include "DeviceState.h"
+#include "Connections.h"
 #include "Peripheral.h"
 #include "pins.h"
 #include "secrets.h"
@@ -27,6 +28,7 @@ WiFiConnection wifi(WIFI_SSID, WIFI_PASSWORD);
 BLEConnection ble(BLE_ADVERTISER_NAME, deviceState);
 
 Peripheral* peripherals[] = {&rotary, &buttonA, &ldr, &pir, &dht, &lights, &oled } ;
+Connections* connections[] = {&wifi, &ble};
 
 void setup(){
   Serial.begin(115200);
@@ -34,10 +36,9 @@ void setup(){
   // Initialise Peripherals
   for(Peripheral* p : peripherals) p->begin();
 
-  // Initialise Connectivity
-  wifi.begin();
+  // Initialise Connections
   deviceState.ble_advertiser_name = const_cast<char *>(BLE_ADVERTISER_NAME);
-  ble.begin();
+  for(Connections* connection : connections) connection->begin();
 
   // Populate DeviceState struct with as much informaton as we know right now
   deviceState.ssid = const_cast<char *>(WIFI_SSID);
@@ -48,7 +49,7 @@ void setup(){
 void loop(){
   // Update Peripherals
   for(Peripheral* p: peripherals) p->update();
-  ble.update();
+  for(Connections* connection : connections) connection->update();
   
   switch(deviceState.screen){
     case Screen::Home:
