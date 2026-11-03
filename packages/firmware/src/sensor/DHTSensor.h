@@ -32,7 +32,9 @@ class DHTSensor : public Peripheral {
     float getTemperature() const;
     float getHumidity() const;
     
-    // NAN values may indiciate sensor fault
+    // NAN, +Infinity, and -Infinity values may indiciate sensor fault
+    bool isTemperatureValid() const;
+    bool isHumidityValid() const;
     bool isError() const;
 
   private:

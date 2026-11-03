@@ -6,7 +6,7 @@
 #include "input/PushButton.h"
 #include "input/RotaryEncoder.h"
 #include "light/LightArray.h"
-#include "screen/oledScreen.h"
+#include "screen/OledScreen.h"
 #include "sensor/DHTSensor.h"
 
 extern Mp3Player mp3;

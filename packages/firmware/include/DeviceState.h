@@ -9,34 +9,73 @@ enum class Screen {
   Alarm_Setter,   // 2
   Song_Picker,    // 3
   Settings,       // 4
-  Off
+  Off             // 5
+};
+
+enum class LightMode : uint8_t {
+  Off,
+  Steady,
+  Sunrise
 };
 
 struct DeviceState {
-  tm currentTime = {};
   Screen screen = Screen::Home;
-
-  const char* ssid = "";
-  const char* ble_advertiser_name = "";
   const char* firmwareVersion = "1.0.0";
+  unsigned long upTimeMs = 0;
+  uint16_t errorCount = 0;
 
-  float temperatureC = NAN;
-  float humidityPercent = NAN;
-  int ambientLightPercent = 0;
-  int16_t wifiRssi = 0;
-  bool motionDetected = false;
-  bool buttonPressed = false;
-  int32_t rotaryPosition = 0;
-  bool temperatureValid = false;
-  bool humidityValid = false;
-  bool isWifiConnected = false;
-  bool isBluetoothConnected = false;
+  tm currentTime = {};
+  bool isTimeSynced = false;
+
   bool isAlarmSet = false;
   uint8_t alarmHour = 0;
   uint8_t alarmMinute = 0;
-  bool lightOn = false;
+
+  const char* ssid = "";
+  int16_t wifiRssi = 0;
+  bool isWifiConnected = false;
+
+  const char* bleAdvertiserName = "";
+  bool isBluetoothConnected = false;
+
+  float temperature = NAN;
+  bool temperatureValid = false;
+  float humidity = NAN;
+  bool humidityValid = false;
+  int ambientLightPercent = 0;
+  bool motionDetected = false;
+
+  int32_t rotaryPositionSinceLastUpdate = 0;
+  int32_t rotaryPositionSinceLastReset = 0;
+  bool rotaryButtonPressed = false;
+  bool backButtonPressed = false;
+  bool alarmButtonPressed = false;
+
+  bool isLightOn = false;
   uint8_t lightBrightnessPercent = 0;
-  const char* lightMode = "OFF";
+  LightMode lightMode = LightMode::Off;
+  uint8_t volume = 0;
   bool isSoundOn = true;
-  bool isTimeSynced = false;
 };
+
+// Names used for these enums in BLE / MQTT JSON
+inline const char* lightModeName(LightMode mode) {
+  switch (mode) {
+    case LightMode::Off:     return "OFF";
+    case LightMode::Steady:  return "STEADY";
+    case LightMode::Sunrise: return "SUNRISE";
+  }
+  return "OFF";
+}
+
+inline const char* screenName(Screen screen) {
+  switch (screen) {
+    case Screen::Home:         return "HOME";
+    case Screen::Main_Menu:    return "MAIN_MENU";
+    case Screen::Alarm_Setter: return "ALARM_SETTER";
+    case Screen::Song_Picker:  return "SONG_PICKER";
+    case Screen::Settings:     return "SETTINGS";
+    case Screen::Off:          return "OFF";
+  }
+  return "UNKNOWN";
+}

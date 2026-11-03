@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
+#include <DeviceState.h>
 #include <Peripheral.h>
 
 // - - - - - - Warning - - - - - - 
@@ -34,12 +35,12 @@ class LightArray : public Peripheral{
     void update() override;  // Increase the 'tick' of LightArray
 
     void startSunrise(unsigned long durationMs);
-    bool applyControl(uint8_t brightnessPercent, const char* mode);
+    void applyControl(uint8_t brightnessPercent, LightMode mode);
     void off();
     bool isRunning();
     bool isOn() const;
     uint8_t getBrightnessPercent() const;
-    const char* getMode() const;
+    LightMode getMode() const;
 
   private:
     Adafruit_NeoPixel strip;
