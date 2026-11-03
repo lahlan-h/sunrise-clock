@@ -100,7 +100,7 @@ void MQTTConnection::connectIfReady() {
   }
 }
 
-bool MQTTConnection::isConnected() const {
+bool MQTTConnection::isConnected() {
   return mqttClient.connected();
 }
 

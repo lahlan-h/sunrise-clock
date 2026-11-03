@@ -29,7 +29,7 @@ class MQTTConnection : public Connections {
     void begin() override;
     void update() override;
 
-    bool isConnected() const;
+    bool isConnected();
     bool publishTelemetry(const char* payload, bool retained = false);
 
     bool popCommand(BLECommand& command);
