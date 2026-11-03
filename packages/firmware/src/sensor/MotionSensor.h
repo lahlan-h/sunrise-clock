@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <Peripheral.h>
 
 // - - - - - - - Usage - - - - - - -
 // 1  | #include "input/MotionSensor.h"
@@ -19,12 +20,12 @@
 // 14 | }
 // - - - - - - - - - - - - - - - - -
 
-class MotionSensor{
+class MotionSensor : public Peripheral {
   public:
     MotionSensor(uint8_t pirPin);
     
-    void begin();
-    void update();
+    void begin() override;
+    void update() override;
     void reset();
 
     bool motionJustStarted() const;

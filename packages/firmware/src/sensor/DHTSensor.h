@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <DHT.h>
+#include <Peripheral.h>
 
 // - - - - - - - Usage - - - - - - -
 // 1  | #include "input/DHTSensor.h"
@@ -20,12 +21,12 @@
 // 14 | }
 // - - - - - - - - - - - - - - - - -
 
-class DHTSensor {
+class DHTSensor : public Peripheral {
   public:
     DHTSensor(uint8_t dhtPin);
 
-    void begin();
-    void update();
+    void begin() override;
+    void update() override;
 
     // Upstream utilisation requires checking for possible NAN
     float getTemperature() const;

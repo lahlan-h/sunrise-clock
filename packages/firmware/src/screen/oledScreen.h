@@ -1,26 +1,30 @@
 #pragma once
 
 #include <Arduino.h>
+#include <DeviceState.h>
 #include <U8g2lib.h>
+#include <Peripheral.h>
 
-class OledScreen {
+class OledScreen : public Peripheral {
   public:
-    OledScreen(uint8_t sdaPin, uint8_t sclPin, uint8_t i2cAddress);
+    OledScreen(uint8_t sdaPin, uint8_t sclPin, uint8_t i2cAddress = 0x3C);
 
-    void begin();
+    void begin() override;
+
+    void drawHome(const DeviceState& state);
+    void drawWakeUp();
+    void drawSettings();
+    void drawSongsList();
+    
+    /* 
     void drawSongList(
-      const char *const songNames[],
+      const char* const songNames[],
       uint8_t songCount,
       uint8_t selectedSong,
       uint8_t firstVisibleSong
     );
+    */
 
   private:
-    static constexpr uint8_t rowHeight = 11;
-    static constexpr uint8_t visibleRows = 6;
-
-    U8G2_SH1106_128X64_NONAME_F_HW_I2C display;
-    uint8_t sdaPin;
-    uint8_t sclPin;
-    uint8_t i2cAddress;
+    U8G2_SH1106_128X64_NONAME_F_HW_I2C u8g2;
 };

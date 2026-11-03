@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <Peripheral.h>
 
 // - - - - - - Warning - - - - - - 
 // This implementation uses INPUT_PULLUP
@@ -23,12 +24,12 @@
 // 12 | }
 // - - - - - - - - - - - - - - - - -
 
-class PushButton{
+class PushButton : public Peripheral {
   public:
-    PushButton(uint8_t btnPin, uint16_t btnDebounceMs);
+    PushButton(uint8_t btnPin, uint16_t btnDebounceMs = 40);
 
-    void begin();
-    void update();
+    void begin() override;
+    void update() override;
     bool getIsPushed() const;
 
   private:
