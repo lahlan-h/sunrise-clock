@@ -1,6 +1,7 @@
 #include <Arduino.h>
 
 #include "DeviceState.h"
+#include "DeviceStateUpdater.h"
 #include "Connections.h"
 #include "Peripheral.h"
 #include "pins.h"
@@ -15,6 +16,8 @@
 #include "screen/OledScreen.h"
 #include "connectivity/BLEConnection.h"
 #include "connectivity/WiFiConnection.h"
+#include "connectivity/MQTTConnection.h"
+#include "connectivity/TelemetryPublisher.h"
 #include "audio/Mp3Player.h"
 
 DeviceState deviceState;
@@ -29,9 +32,20 @@ Mp3Player mp3(MP3_RX_PIN, MP3_TX_PIN);
 
 WiFiConnection wifi(WIFI_SSID, WIFI_PASSWORD);
 BLEConnection ble(BLE_ADVERTISER_NAME, deviceState, mp3);
+MQTTConnection mqtt(
+    wifi,
+    MQTT_HOST,
+    MQTT_PORT,
+    MQTT_USERNAME,
+    MQTT_PASSWORD,
+    MQTT_DEVICE_ID,
+    MQTT_USE_TLS);
+TelemetryPublisher telemetry(mqtt, deviceState, MQTT_DEVICE_ID);
+DeviceStateUpdater stateUpdater(
+    deviceState, wifi, ble, dht, ldr, pir, buttonA, rotary);
 
 Peripheral* peripherals[] = {&rotary, &buttonA, &ldr, &pir, &dht, &lights, &oled } ;
-Connections* connections[] = {&wifi, &ble};
+Connections* connections[] = {&wifi, &ble, &mqtt};
 
 void setup(){
   Serial.begin(115200);
@@ -48,12 +62,15 @@ void setup(){
   deviceState.ssid = const_cast<char *>(WIFI_SSID);
   deviceState.isWifiConnected = wifi.isConnected();
   deviceState.isTimeSynced = wifi.getTime(deviceState.currentTime);
+  telemetry.begin();
 }
 
 void loop(){
   // Update Peripherals
   for(Peripheral* p: peripherals) p->update();
   for(Connections* connection : connections) connection->update();
+  stateUpdater.update();
+  telemetry.update();
   
   switch(deviceState.screen){
     case Screen::Home:

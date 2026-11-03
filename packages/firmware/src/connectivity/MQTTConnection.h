@@ -12,7 +12,7 @@ class WiFiConnection;
 class MQTTConnection : public Connections {
   public:
     static constexpr uint8_t PROTOCOL_VERSION = 1;
-    static constexpr size_t MAX_PAYLOAD_SIZE = 512;
+    static constexpr size_t MAX_PAYLOAD_SIZE = 768;
     static constexpr uint8_t COMMAND_QUEUE_CAPACITY = 4;
 
     MQTTConnection(

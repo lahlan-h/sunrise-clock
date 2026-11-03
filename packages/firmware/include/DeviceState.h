@@ -19,6 +19,14 @@ struct DeviceState {
   char* ssid = "";
   char* ble_advertiser_name = "";
 
+  float temperatureC = NAN;
+  float humidityPercent = NAN;
+  int ambientLightPercent = 0;
+  bool motionDetected = false;
+  bool buttonPressed = false;
+  int32_t rotaryPosition = 0;
+  bool temperatureValid = false;
+  bool humidityValid = false;
   bool isWifiConnected = false;
   bool isBluetoothConnected = false;
   bool isAlarmSet = false;

@@ -3,9 +3,12 @@
 ## Purpose
 
 This document defines the setup plan for adding the project's local and global
-communication paths. It is intentionally a design and class-creation plan;
-connection behavior, payload publishing, and phone control are not implemented
-yet.
+communication paths. The checklist below is also an implementation review:
+
+- `[x]` means implemented in the current repository.
+- `[ ]` means still to be implemented.
+- `Partial` notes identify work that exists but does not yet satisfy the full
+  requirement.
 
 The design follows the pipeline in [`pipeline.md`](./pipeline.md):
 
@@ -22,18 +25,27 @@ it must not replace the local alarm or light-control logic.
 
 ## Required outcomes
 
-1. Every input and light peripheral can expose a current, named value through a
-   common device-state/telemetry model.
-2. A nearby phone can connect to the ESP32 over BLE, read status, receive live
-   updates, and configure values such as the alarm time.
-3. The ESP32 can join Wi-Fi, recover from a dropped connection, and maintain an
-   authenticated MQTT connection.
-4. Meaningful peripheral data is published as MQTT telemetry, consumed by
-   Telegraf, stored in InfluxDB, and displayed in Grafana.
-5. MQTT commands can be received for non-time-critical remote configuration or
-   control, while safety- and timing-sensitive behavior continues locally.
-6. Loss of BLE, Wi-Fi, MQTT, Telegraf, InfluxDB, or Grafana does not prevent
-   the clock's local sensing and alarm/light behavior.
+1. [ ] Every input and light peripheral can expose a current, named value
+    through a common device-state/telemetry model. `DeviceState` currently only
+    contains alarm, connection, display, and basic light fields.
+2. [ ] A nearby phone can connect to the ESP32 over BLE, read status, receive
+    live updates, and configure values such as the alarm time. `BLEConnection`
+    implements the transport and validation, but commands are not applied by
+    the application and the documented UUIDs do not match the firmware UUIDs.
+3. [ ] The ESP32 can join Wi-Fi, recover from a dropped connection, and
+    maintain an authenticated MQTT connection. Wi-Fi setup and an MQTT wrapper
+    exist, but recovery and MQTT wiring are incomplete.
+4. [ ] Meaningful peripheral data is published as MQTT telemetry, consumed by
+    Telegraf, stored in InfluxDB, and displayed in Grafana. No telemetry
+    publisher or cloud configuration is present.
+5. [ ] MQTT commands can be received for non-time-critical remote configuration
+    or control, while safety- and timing-sensitive behavior continues locally.
+    MQTT command parsing and queuing exist, but there is no application command
+    router or main-loop processing.
+6. [ ] Loss of BLE, Wi-Fi, MQTT, Telegraf, InfluxDB, or Grafana does not
+    prevent the clock's local sensing and alarm/light behavior. The current loop
+    keeps updating peripherals, but the local alarm/light behavior and outage
+    handling are not integrated or demonstrated.
 
 ## Current starting point
 
@@ -43,7 +55,8 @@ The firmware already has:
 - input and sensor classes for the rotary encoder, push button, photoresistor,
   motion sensor, and DHT sensor;
 - a `LightArray` output class and `DeviceState`;
-- placeholder `BLEConnection` and `WiFiConnection` classes;
+- a substantially implemented `BLEConnection`, an incomplete
+  `WiFiConnection`, and an MQTT wrapper that is not wired into `main.cpp`;
 - local time synchronization in `WiFiConnection`.
 
 The connection plan should extend these existing patterns rather than make
@@ -55,6 +68,11 @@ individual peripheral classes know about BLE, MQTT, or cloud storage.
 
 Update the state model first so all communication layers consume the same
 source of truth.
+
+Status: `Partial`. Alarm, time, connection, and basic light fields exist in
+`DeviceState`, but sensor snapshots, device identity, firmware version,
+uptime, error counters, validity flags, configuration source, and
+acknowledgement state are not represented.
 
 Proposed responsibilities:
 
@@ -82,6 +100,17 @@ These can remain small value types if adding separate files is not justified.
 
 ### 2. Peripheral value adapters
 
+Status: `Partial`. Several hardware classes have local accessors, and
+`main.cpp` updates the peripherals, but their values are not copied into
+`DeviceState` and `LightArray` has no telemetry snapshot/accessors.
+
+- [ ] Add stable field names, units, expected ranges, sampling periods, and
+  invalid/stale behavior for every value.
+- [ ] Copy peripheral values into `DeviceState` from `main.cpp` (or a
+  coordinator).
+- [ ] Keep connectivity classes reading the state model rather than GPIO or
+  driver internals.
+
 Keep the existing hardware classes responsible for hardware access:
 
 | Existing class | Values to expose |
@@ -106,6 +135,12 @@ The setup phase should define, for every value:
 - whether it is telemetry-only or can also be commanded.
 
 ### 3. `BLEConnection`
+
+Status: `Partial`. The firmware creates a service, advertises, tracks
+connections, exposes status/alarm/device-info characteristics, validates JSON
+commands, queues accepted writes, and sends acknowledgements. It does not yet
+apply queued commands, expose all important readings, or use the UUIDs listed
+in this plan.
 
 Expand `BLEConnection` into the local phone-facing transport.
 
@@ -149,6 +184,10 @@ long-running hardware work directly.
 
 ### 4. `WiFiConnection`
 
+Status: `Partial`. Station mode, credential use, initial connection request,
+time-zone/NTP setup, and connection/time getters are implemented. Reconnect
+management, IP/RSSI/failure reporting, and `update()`-based recovery are not.
+
 Complete the existing Wi-Fi wrapper as the transport manager.
 
 Proposed responsibilities:
@@ -164,6 +203,11 @@ The class should not own MQTT topics or application commands. It should
 provide the network readiness required by `MQTTConnection`.
 
 ### 5. `MQTTConnection`
+
+Status: `Partial`. `MQTTConnection` exists with topic construction, Wi-Fi
+gating, reconnect backoff, command subscription, payload-size/protocol/range
+validation, command queuing, acknowledgements, and publish methods. It is not
+constructed or updated by `main.cpp`, and it has no telemetry/state producer.
 
 Create a dedicated MQTT wrapper, for example:
 
@@ -188,6 +232,9 @@ credentials in the ignored secrets/configuration path.
 
 ### 6. `TelemetryPublisher`
 
+Status: `[x]` Implemented. `TelemetryPublisher` serializes a bounded,
+versioned `DeviceState` snapshot and publishes it through `MQTTConnection`.
+
 Create a separate publisher/serializer so MQTT transport and data modeling are
 not coupled.
 
@@ -200,6 +247,10 @@ Proposed responsibilities:
 - include `device_id`, `location` (if used), protocol version, and state;
 - publish health data such as uptime, RSSI, and connection status;
 - record publish failures for diagnostics.
+
+The firmware publishes immediately after the MQTT connection becomes
+available when state changes, and otherwise on a 30-second interval. Invalid
+DHT readings are represented by `null` values with explicit validity fields.
 
 The first payload should cover all meaningful project data, for example:
 
@@ -226,6 +277,9 @@ The first payload should cover all meaningful project data, for example:
 
 ### 7. `CommandRouter`
 
+Status: `[ ]` Not implemented. BLE and MQTT currently have separate parsers
+and queues; neither queue is routed through a shared application boundary.
+
 Create one application-facing command boundary for both local BLE writes and
 MQTT commands.
 
@@ -244,18 +298,27 @@ This prevents BLE and MQTT from implementing different alarm or light rules.
 The physical controls should use the same application-level setters where
 practical.
 
-### 8. `ConnectionManager` (optional coordinator)
+### 8. `Connections` interface
 
-If `main.cpp` becomes crowded, add a coordinator that owns
-`BLEConnection`, `WiFiConnection`, `MQTTConnection`, `TelemetryPublisher`, and
-`CommandRouter`. It should provide `begin()` and non-blocking `update()` calls.
+Status: `[x]` Implemented in `include/Connections.h`. The existing
+`Connections` interface provides the shared `begin()` and non-blocking
+`update()` lifecycle used by `WiFiConnection`, `BLEConnection`, and future
+connection classes. `main.cpp` currently stores connection implementations in
+the `Connections* connections[]` collection and calls them through this
+interface.
 
-The coordinator must not hide the timing of peripheral sampling or prevent
-local control updates when a connection is unavailable.
+No separate `ConnectionManager` class is required. If coordination becomes
+necessary, it should be implemented through the existing `Connections`
+abstraction or directly in `main.cpp` without hiding peripheral timing or
+preventing local control updates when a connection is unavailable.
 
 ## Communication contracts
 
 ### Local BLE path
+
+Status: `Partial`. The phone can read alarm/status/device information and
+receive queued-command acknowledgements, but important sensor readings and
+application-side command effects are not available yet.
 
 ```text
 Phone
@@ -271,6 +334,9 @@ than requiring continuous polling. BLE is the primary local configuration
 method; serial output may remain as a development diagnostic interface.
 
 ### Global MQTT path
+
+Status: `Partial`. The MQTT wrapper uses the planned topic namespace, but no
+telemetry is published and no end-to-end command handling is connected.
 
 ```text
 DeviceState
@@ -299,22 +365,22 @@ local alarm state machine.
 
 These are configuration deliverables for the implementation phase:
 
-1. Configure Telegraf `mqtt_consumer` for
+- [ ] Configure Telegraf `mqtt_consumer` for
    `sunrise-clock/+/telemetry`.
-2. Parse the versioned JSON payload and map numeric readings to fields.
-3. Use low-cardinality values such as `device_id`, `location`, and `state` as
+- [ ] Parse the versioned JSON payload and map numeric readings to fields.
+- [ ] Use low-cardinality values such as `device_id`, `location`, and `state` as
    tags; keep readings, alarm values, RSSI, and brightness as fields.
-4. Write to an InfluxDB bucket with a stable measurement name such as
+- [ ] Write to an InfluxDB bucket with a stable measurement name such as
    `sunrise_clock_telemetry`.
-5. Confirm that at least one real value from each relevant input and the
+- [ ] Confirm that at least one real value from each relevant input and the
    `LightArray` appears in InfluxDB.
-6. Create Grafana panels for:
+- [ ] Create Grafana panels for:
    - temperature and humidity;
    - ambient light and motion;
    - alarm enabled/time and current device state;
    - light brightness/output mode;
    - Wi-Fi/BLE status, RSSI, uptime, and last-seen time.
-7. Add a response path only after telemetry is proven:
+- [ ] Add a response path only after telemetry is proven:
    Grafana/operator service -> MQTT command -> `CommandRouter` -> ESP32.
 
 The cloud configuration must never be considered complete based only on a
@@ -325,80 +391,90 @@ to MQTT, Telegraf, InfluxDB, and a Grafana panel.
 
 ### Phase 1: Define contracts
 
-- agree on `DeviceState` fields and validity rules;
-- assign device identity and protocol version;
-- define BLE UUIDs and characteristic formats;
-- define MQTT topics and telemetry/command schemas;
-- document units, ranges, and update periods.
+- [ ] Agree on `DeviceState` fields and validity rules.
+- [x] Assign a device identity and protocol version.
+- [ ] Reconcile and finalize BLE UUIDs and characteristic formats.
+- [x] Define MQTT topics and command schema.
+- [ ] Define the complete telemetry schema, units, ranges, and update periods.
 
 ### Phase 2: Prepare configuration
 
-- add non-secret broker and device configuration defaults;
-- extend the ignored secrets example with Wi-Fi, BLE, MQTT, and Influx/Telegraf
+- [x] Add non-secret broker and device configuration defaults.
+- [ ] Extend the ignored secrets example with Wi-Fi, BLE, MQTT, and Influx/Telegraf
   deployment notes as appropriate;
-- verify that credentials are not committed;
-- choose whether the broker uses TLS for the target deployment.
+- [x] Verify that credentials are not committed.
+- [ ] Choose and verify whether the broker uses TLS for the target deployment.
 
 ### Phase 3: Prepare the firmware class interfaces
 
-- add the telemetry/configuration value types;
-- add read accessors or snapshots to peripheral classes;
-- expand `BLEConnection` and `WiFiConnection` interfaces;
-- add `MQTTConnection`, `TelemetryPublisher`, and `CommandRouter` headers;
-- define ownership and update order in `main.cpp`;
-- keep method bodies as setup stubs until the contracts are reviewed.
+- [ ] Add the telemetry/configuration value types.
+- [ ] Add read accessors or snapshots to all required peripheral classes.
+- [x] Expand `BLEConnection` and add the initial `WiFiConnection` interface.
+- [x] Add the `MQTTConnection` header.
+- [x] Add the `TelemetryPublisher` header and implementation. `CommandRouter`
+  remains pending.
+- [x] Define the connection lifecycle abstraction in `include/Connections.h`.
+- [ ] Define final ownership and update order for all connections in `main.cpp`.
 
 ### Phase 4: Integrate local communication
 
-- initialize BLE during firmware setup;
-- expose status, telemetry, alarm configuration, and light control;
-- route phone writes through `CommandRouter`;
-- test read, write, notify, invalid input, reconnect, and restart behavior.
+- [x] Initialize BLE during firmware setup.
+- [ ] Expose status, telemetry, alarm configuration, and light control
+  completely.
+- [ ] Route phone writes through `CommandRouter`.
+- [ ] Test read, write, notify, invalid input, reconnect, and restart behavior.
 
 ### Phase 5: Integrate global communication
 
-- complete Wi-Fi readiness and recovery;
-- add MQTT connection/reconnection/subscription handling;
-- publish a real `DeviceState` snapshot;
-- configure Telegraf and verify writes to InfluxDB;
-- build Grafana panels from the stable measurement schema.
+- [ ] Complete Wi-Fi readiness and recovery.
+- [ ] Wire MQTT connection/reconnection/subscription handling into `main.cpp`.
+- [ ] Publish a real `DeviceState` snapshot.
+- [ ] Configure Telegraf and verify writes to InfluxDB.
+- [ ] Build Grafana panels from the stable measurement schema.
 
 ### Phase 6: Demonstrate and harden
 
-- demonstrate phone alarm-time configuration over BLE;
-- demonstrate live peripheral values over BLE;
-- demonstrate the same meaningful values through MQTT, Telegraf, InfluxDB,
+- [ ] Demonstrate phone alarm-time configuration over BLE.
+- [ ] Demonstrate live peripheral values over BLE.
+- [ ] Demonstrate the same meaningful values through MQTT, Telegraf, InfluxDB,
   and Grafana;
-- test Wi-Fi, broker, BLE, sensor, and cloud outages;
-- verify local alarm/light behavior continues during global outages;
-- verify duplicate, stale, malformed, and out-of-range commands are rejected.
+- [ ] Test Wi-Fi, broker, BLE, sensor, and cloud outages.
+- [ ] Verify local alarm/light behavior continues during global outages.
+- [ ] Verify duplicate, stale, malformed, and out-of-range commands are
+  rejected.
 
 ## Main-loop integration order
 
+Status: `Partial`. Peripheral updates and connection updates run, but command
+queues, local application control, MQTT, and telemetry publishing are not
+processed in this order yet.
+
 The eventual loop should remain non-blocking and follow this order:
 
-1. update/read peripherals on their own schedules;
-2. update local state and apply local alarm/light control;
-3. process queued BLE commands;
-4. process queued MQTT commands;
-5. run BLE and MQTT client maintenance;
-6. publish scheduled or changed telemetry;
-7. update display/diagnostic output.
+1. [x] Update/read peripherals on their own schedules.
+2. [ ] Update local state and apply local alarm/light control.
+3. [ ] Process queued BLE commands.
+4. [ ] Process queued MQTT commands.
+5. [ ] Run BLE and MQTT client maintenance.
+6. [ ] Publish scheduled or changed telemetry.
+7. [ ] Update display/diagnostic output.
 
 No connection failure should prevent steps 1 or 2. Avoid long delays in
 connection callbacks, BLE callbacks, sensor reads, or MQTT serialization.
 
 ## Definition of done for the setup phase
 
-The setup phase is complete when:
+The setup phase is not complete. Current status:
 
-- the class boundaries and ownership described above are agreed and represented
-  by firmware headers/stubs where required;
-- every peripheral has a documented value, unit, validity rule, and update
-  owner;
-- BLE UUIDs, characteristic permissions, and command validation rules are
-  documented;
-- MQTT topics and the versioned telemetry schema are documented;
-- Telegraf, InfluxDB, and Grafana configuration tasks are assigned;
-- secrets remain outside source control;
-- implementation and demonstration tests are listed for the next phase.
+- [ ] The class boundaries and ownership described above are agreed and
+  represented by firmware headers/stubs where required.
+- [ ] Every peripheral has a documented value, unit, validity rule, and update
+  owner.
+- [ ] BLE UUIDs, characteristic permissions, and command validation rules are
+  consistent between documentation and firmware.
+- [ ] MQTT topics and the versioned telemetry schema are documented and
+  implemented.
+- [ ] Telegraf, InfluxDB, and Grafana configuration tasks are assigned and
+  verified end to end.
+- [x] Secrets remain outside source control.
+- [ ] Implementation and demonstration tests are listed and passing.

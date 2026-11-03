@@ -17,3 +17,7 @@ void MotionSensor::update(){
 bool MotionSensor::motionJustStarted() const {
   return motionStarted;
 }
+
+bool MotionSensor::isMotionDetected() const {
+  return wasSignalHigh;
+}
