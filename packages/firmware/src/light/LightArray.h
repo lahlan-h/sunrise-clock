@@ -34,6 +34,7 @@ class LightArray : public Peripheral{
     void update() override;  // Increase the 'tick' of LightArray
 
     void startSunrise(unsigned long durationMs);
+    bool applyControl(uint8_t brightnessPercent, const char* mode);
     void off();
     bool isRunning();
     bool isOn() const;
@@ -46,6 +47,7 @@ class LightArray : public Peripheral{
     unsigned long durationMs = 0;
     bool running = false;
     bool on = false;
+    uint8_t brightnessPercent = 100;
 
     uint32_t sunriseColour(float progress);
 };
