@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
+#include <Peripheral.h>
 
 // - - - - - - Warning - - - - - - 
 // This implementation is for the
@@ -25,12 +26,12 @@
 // 12 | }
 // - - - - - - - - - - - - - - - - -
 
-class LightArray {
+class LightArray : public Peripheral{
   public:
-    LightArray(uint8_t pin, uint16_t count);
+    LightArray(uint8_t pin, uint16_t count = 16);
     
-    void begin();   // Setup the LightArray for use
-    void update();  // Increase the 'tick' of LightArray
+    void begin() override;   // Setup the LightArray for use
+    void update() override;  // Increase the 'tick' of LightArray
 
     void startSunrise(unsigned long durationMs);
     void off();

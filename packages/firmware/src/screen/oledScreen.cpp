@@ -1,17 +1,15 @@
-#include "oledScreen.h"
+#include "OledScreen.h"
 
-#include <Wire.h>
+static const uint8_t ROW_HEIGHT = 11;
+static const uint8_t VISIBLE_ROWS = 6;
 
 OledScreen::OledScreen(uint8_t sdaPin, uint8_t sclPin, uint8_t i2cAddress)
-: display(U8G2_R0, U8X8_PIN_NONE),
-  sdaPin(sdaPin),
-  sclPin(sclPin),
-  i2cAddress(i2cAddress) {}
+: u8g2(U8G2_R0, U8X8_PIN_NONE, sclPin, sdaPin) {
+  display.setI2CAddress(i2cAddress << 1); // i2c addresses are 7-bits, U8G2 library expects 8-bits
+}
 
 void OledScreen::begin() {
-  Wire.begin(sdaPin, sclPin);
-  display.setI2CAddress(i2cAddress << 1);
-  display.begin();
+  u8g2.begin();
 }
 
 void OledScreen::drawSongList(
@@ -23,16 +21,16 @@ void OledScreen::drawSongList(
   display.clearBuffer();
   display.setFont(u8g2_font_6x10_tf);
 
-  for (uint8_t row = 0; row < visibleRows; ++row) {
+  for (uint8_t row = 0; row < VISIBLE_ROWS; ++row) {
     const uint8_t songIndex = firstVisibleSong + row;
     if (songIndex >= songCount) {
       break;
     }
 
-    const uint8_t y = row * rowHeight;
+    const uint8_t y = row * ROW_HEIGHT;
     if (songIndex == selectedSong) {
       display.setDrawColor(1);
-      display.drawBox(0, y, 128, rowHeight);
+      display.drawBox(0, y, 128, ROW_HEIGHT);
       display.setDrawColor(0);
     } else {
       display.setDrawColor(1);

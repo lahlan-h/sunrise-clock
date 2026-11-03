@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <Peripheral.h>
 
 // - - - - - - Warning - - - - - - 
 // Written for a  KY-040 module. Power
@@ -23,12 +24,12 @@
 // 12 | }
 // - - - - - - - - - - - - - - - - -
 
-class RotaryEncoder {
+class RotaryEncoder : public Peripheral {
   public:
     RotaryEncoder(uint8_t clkPin, uint8_t dtPin);
 
-    void begin();         
-    void update();  // Getters change when this runs, update once per loop
+    void begin() override;         
+    void update() override;  // Getters change when this runs, update once per loop
     
     void reset();
     int32_t getClicksSinceReset();
