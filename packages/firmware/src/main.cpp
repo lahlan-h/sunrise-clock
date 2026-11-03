@@ -12,8 +12,10 @@
 #include "sensor/DHTSensor.h"
 #include "light/LightArray.h"
 #include "screen/OledScreen.h"
+#include "connectivity/BLEConnection.h"
 #include "connectivity/WiFiConnection.h"
 
+DeviceState deviceState;
 RotaryEncoder rotary(ROTARY_ENCODER_CLK, ROTARY_ENCODER_DT);
 PushButton buttonA(BTN_A_PIN);
 PhotoResistor ldr(LDR_PIN);
@@ -22,9 +24,9 @@ DHTSensor dht(DHT_PIN);
 LightArray lights(LED_STRIP_DIN);
 OledScreen oled(OLED_SDA_PIN, OLED_SCL_PIN);
 WiFiConnection wifi(WIFI_SSID, WIFI_PASSWORD);
+BLEConnection ble(BLE_ADVERTISER_NAME, deviceState);
 
 Peripheral* peripherals[] = {&rotary, &buttonA, &ldr, &pir, &dht, &lights, &oled } ;
-DeviceState deviceState;
 
 void setup(){
   Serial.begin(115200);
@@ -34,6 +36,8 @@ void setup(){
 
   // Initialise Connectivity
   wifi.begin();
+  deviceState.ble_advertiser_name = const_cast<char *>(BLE_ADVERTISER_NAME);
+  ble.begin();
 
   // Populate DeviceState struct with as much informaton as we know right now
   deviceState.ssid = const_cast<char *>(WIFI_SSID);
@@ -44,6 +48,7 @@ void setup(){
 void loop(){
   // Update Peripherals
   for(Peripheral* p: peripherals) p->update();
+  ble.update();
   
   switch(deviceState.screen){
     case Screen::Home:

@@ -25,7 +25,8 @@ class Mp3Player {
 };
 
 
-
+//note: sound effects are:
+//beep,click,eeree,pop,teleport
 
 
   
