@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <Peripheral.h>
 
 // - - - - - - - Usage - - - - - - -
 // 1  | #include <Arduino.h>
@@ -20,12 +21,12 @@
 // 15 | }
 // - - - - - - - - - - - - - - - - -
 
-class PhotoResistor {
+class PhotoResistor : public Peripheral {
   public:
     PhotoResistor(uint8_t ldrPin);
 
-    void begin();
-    void update();
+    void begin() override;
+    void update() override;
 
     int getLightLevel();
     boolean isNight();
