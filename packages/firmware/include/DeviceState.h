@@ -9,19 +9,26 @@ enum class Screen {
   Alarm_Setter,   // 2
   Song_Picker,    // 3
   Settings,       // 4
-  Off
+  Off             // 5
 };
 
 struct DeviceState {
   tm currentTime = {};
   Screen screen = Screen::Home;
 
-  char* ssid = "";
-  char* ble_advertiser_name = "";
+  const char* firmware_version = "0.0.0";
+  unsigned long uptime = 0;
+  uint16_t errors = 0;
+  
+  const char* ssid = "";
+  const char* ble_advertiser_name = "";
 
   bool isWifiConnected = false;
   bool isBluetoothConnected = false;
-  bool isAlarmSet = false;
+  bool isAlarmSet = true;
   bool isSoundOn = true;
   bool isTimeSynced = false;
+
+  float temperature = NAN;
+  float humidity = NAN;
 };
