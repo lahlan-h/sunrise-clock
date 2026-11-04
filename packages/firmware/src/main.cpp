@@ -34,7 +34,7 @@ OledScreen oled(OLED_SDA_PIN, OLED_SCL_PIN);
 Mp3Player mp3(MP3_RX_PIN, MP3_TX_PIN);
 
 // Commands from BLE and MQTT all go through here
-CommandRouter commandRouter(deviceState, lights);
+CommandRouter commandRouter(deviceState, lights, mp3);
 
 // Initalise Connections
 WiFiConnection wifi(WIFI_SSID, WIFI_PASSWORD);
@@ -81,6 +81,7 @@ void updateDeviceState(){
   deviceState.isLightOn = lights.isOn(); // Maybe redo lights variable name
   deviceState.lightBrightnessPercent = lights.getBrightnessPercent();
   deviceState.lightMode = lights.getMode();
+  deviceState.volume = mp3.getVolume();
 
   deviceState.upTimeMs = millis();
 }

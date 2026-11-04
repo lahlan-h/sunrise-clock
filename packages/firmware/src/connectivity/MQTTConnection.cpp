@@ -108,6 +108,7 @@ void MQTTConnection::publishState() {
   doc["light_brightness_percent"] = state.lightBrightnessPercent;
   doc["light_mode"] = lightModeName(state.lightMode);
   doc["sound_on"] = state.isSoundOn;
+  doc["volume"] = state.volume;
   doc["screen"] = screenName(state.screen);
   doc["wifi_connected"] = state.isWifiConnected;
   doc["wifi_rssi"] = state.wifiRssi;

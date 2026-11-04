@@ -160,7 +160,7 @@ notifications, the connect sound) runs on the main loop.
 `state` example:
 
 ```json
-{"alarm_enabled":true,"alarm_hour":6,"alarm_minute":30,"light_mode":"STEADY","light_brightness_percent":50,"temperature_c":24.5,"humidity_percent":48.2}
+{"alarm_enabled":true,"alarm_hour":6,"alarm_minute":30,"light_mode":"STEADY","light_brightness_percent":50,"volume":20,"temperature_c":24.5,"humidity_percent":48.2}
 ```
 
 Acknowledgement examples:
@@ -264,6 +264,7 @@ and have explicit validity fields; other values have none. Payload:
   "light_brightness_percent": 72,
   "light_mode": "STEADY",
   "sound_on": true,
+  "volume": 20,
   "screen": "HOME",
   "wifi_connected": true,
   "wifi_rssi": -58,
@@ -295,12 +296,13 @@ Command JSON, the same for every transport:
 ```json
 {"protocol_version":1,"command_id":"alarm-001","type":"set_alarm","enabled":true,"hour":6,"minute":30}
 {"protocol_version":1,"command_id":"light-001","type":"set_light","brightness_percent":50,"mode":"STEADY"}
+{"protocol_version":1,"command_id":"volume-001","type":"set_volume","volume":20}
 ```
 
-`hour` is `0..23`, `minute` is `0..59`, `brightness_percent` is `0..100`, and
-`mode` is `OFF`, `STEADY`, or `SUNRISE`. Everything is validated before the
-command is queued, so each command gets exactly one acknowledgement and
-applying it cannot fail.
+`hour` is `0..23`, `minute` is `0..59`, `brightness_percent` is `0..100`,
+`mode` is `OFF`, `STEADY`, or `SUNRISE`, and `volume` is `0..30` (DFPlayer
+steps; `0` mutes). Everything is validated before the command is queued, so
+each command gets exactly one acknowledgement and applying it cannot fail.
 
 Error codes:
 
@@ -311,6 +313,7 @@ Error codes:
 - `unsupported_command`;
 - `invalid_alarm`;
 - `invalid_light`;
+- `invalid_volume`;
 - `queue_full`;
 - `not_ready`: `submit()` was called before `begin()`.
 
@@ -319,7 +322,7 @@ Planned extensions:
 - consume commands from physical controls;
 - apply alarm changes through an alarm controller once the local alarm state
   machine exists;
-- route audio settings or playback requests through `Mp3Player`;
+- route playback requests (songs, effects) through `Mp3Player`;
 - reject duplicate or stale commands if that becomes necessary.
 
 The router is an application coordinator rather than a hardware driver. LED
@@ -486,12 +489,15 @@ Phase 4 verification cases:
    (`accepted: true`) and a `state` notification showing the new alarm.
 3. Write valid `OFF`, `STEADY`, and `SUNRISE` light commands at brightness
    values `0`, `50`, and `100`; verify the LED output and notification.
-4. Write malformed JSON, an unsupported protocol version, invalid alarm
-   ranges, invalid brightness, and an unsupported light mode. Verify a single
-   `accepted: false` acknowledgement with the matching error each time.
-5. Disconnect and reconnect the phone; verify advertising resumes and reads
+4. Write `set_volume` commands at `0`, `15`, and `30`; verify the speaker
+   volume and the `state` notification.
+5. Write malformed JSON, an unsupported protocol version, invalid alarm
+   ranges, invalid brightness, an unsupported light mode, and a volume above
+   `30`. Verify a single `accepted: false` acknowledgement with the matching
+   error each time.
+6. Disconnect and reconnect the phone; verify advertising resumes and reads
    return current runtime state.
-6. Restart the ESP32 and verify configuration returns to defaults because
+7. Restart the ESP32 and verify configuration returns to defaults because
    Phase 4 intentionally does not persist settings.
 
 LightBlue test payloads (write each one to `command`):
@@ -501,6 +507,7 @@ LightBlue test payloads (write each one to `command`):
 {"protocol_version":1,"command_id":"light-001","type":"set_light","brightness_percent":50,"mode":"STEADY"}
 {"protocol_version":1,"command_id":"light-002","type":"set_light","brightness_percent":100,"mode":"SUNRISE"}
 {"protocol_version":1,"command_id":"light-003","type":"set_light","brightness_percent":0,"mode":"OFF"}
+{"protocol_version":1,"command_id":"volume-001","type":"set_volume","volume":20}
 {"protocol_version":1,"command_id":"bad-001","type":"set_alarm","enabled":true,"hour":24,"minute":0}
 ```
 

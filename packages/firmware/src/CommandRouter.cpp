@@ -3,6 +3,7 @@
 #include <ArduinoJson.h>
 #include <cstring>
 
+#include "audio/Mp3Player.h"
 #include "light/LightArray.h"
 
 constexpr uint8_t CommandRouter::PROTOCOL_VERSION;
@@ -23,8 +24,8 @@ namespace {
   }
 }
 
-CommandRouter::CommandRouter(DeviceState& state, LightArray& lights)
-: state(state), lights(lights) {}
+CommandRouter::CommandRouter(DeviceState& state, LightArray& lights, Mp3Player& mp3)
+: state(state), lights(lights), mp3(mp3) {}
 
 void CommandRouter::begin() {
   if (queue == nullptr) queue = xQueueCreate(QUEUE_LENGTH, sizeof(Command));
@@ -97,6 +98,14 @@ const char* CommandRouter::parse(const char* json, size_t length, Command& comma
     return nullptr;
   }
 
+  if (strcmp(type, "set_volume") == 0) {
+    int volume = doc["volume"] | -1;
+    if (volume < 0 || volume > Mp3Player::maxVolume) return "invalid_volume";
+    command.type = CommandType::SetVolume;
+    command.volume = static_cast<uint8_t>(volume);
+    return nullptr;
+  }
+
   return "unsupported_command";
 }
 
@@ -109,6 +118,9 @@ void CommandRouter::apply(const Command& command) {
       break;
     case CommandType::SetLight:
       lights.applyControl(command.brightnessPercent, command.lightMode);
+      break;
+    case CommandType::SetVolume:
+      mp3.setVolume(command.volume);
       break;
   }
 }

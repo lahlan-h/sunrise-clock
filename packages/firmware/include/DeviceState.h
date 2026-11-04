@@ -52,6 +52,7 @@ struct DeviceState {
   bool isLightOn = false;
   uint8_t lightBrightnessPercent = 0;
   LightMode lightMode = LightMode::Off;
+  uint8_t volume = 0;
   bool isSoundOn = true;
 };
 

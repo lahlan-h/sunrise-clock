@@ -110,6 +110,7 @@ void BLEConnection::notifyState() {
   doc["alarm_minute"] = state.alarmMinute;
   doc["light_mode"] = lightModeName(state.lightMode);
   doc["light_brightness_percent"] = state.lightBrightnessPercent;
+  doc["volume"] = state.volume;
   setReading(doc, "temperature_c", state.temperatureValid, state.temperature);
   setReading(doc, "humidity_percent", state.humidityValid, state.humidity);
 
