@@ -1,12 +1,13 @@
 #pragma once
 
 #include <Arduino.h>
+#include "Peripheral.h"
 
-class Mp3Player {
+class Mp3Player : public Peripheral{
   public:
     Mp3Player(uint8_t rxPin, uint8_t txPin);
 
-    void begin();
+    void begin() override;
     void play(uint16_t track);
     
     uint8_t getTrackCount() const;
