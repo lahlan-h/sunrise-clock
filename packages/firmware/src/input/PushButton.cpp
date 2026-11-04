@@ -1,14 +1,10 @@
 #include "PushButton.h"
 
-PushButton::PushButton(uint8_t btnPin, uint16_t btnDebounceMs, ButtonWiring wiring)
-: btnPin(btnPin),
-  btnDebounceMs(btnDebounceMs),
-  pressedLevel(wiring == ButtonWiring::ToGround ? LOW : HIGH),
-  lastReading(wiring == ButtonWiring::ToGround ? HIGH : LOW) {} // Start at the released level
+PushButton::PushButton(uint8_t btnPin, uint16_t btnDebounceMs)
+: btnPin(btnPin), btnDebounceMs(btnDebounceMs) {}
 
 void PushButton::begin(){
-  // The internal resistor holds the pin at the released level, so no external resistor is needed
-  pinMode(btnPin, pressedLevel == LOW ? INPUT_PULLUP : INPUT_PULLDOWN);
+  pinMode(btnPin, INPUT_PULLUP);
 }
 
 void PushButton::update(){
@@ -20,11 +16,11 @@ void PushButton::update(){
     lastReading = reading;
   }
 
-  bool wasPushed = isPushed;
+  bool wasPushedLastUpdate = isPushed;
   if (currentMillis - lastChangeMillis >= btnDebounceMs) {
-    isPushed = (reading == pressedLevel);
+    isPushed = (reading == LOW);
   }
-  justPressed = isPushed && !wasPushed;
+  pressedThisUpdate = isPushed && !wasPushedLastUpdate;
 }
 
 bool PushButton::getIsPushed() const {
@@ -32,5 +28,5 @@ bool PushButton::getIsPushed() const {
 }
 
 bool PushButton::wasPressed() const {
-  return justPressed;
+  return pressedThisUpdate;
 }
