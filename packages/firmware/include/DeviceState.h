@@ -47,7 +47,9 @@ struct DeviceState {
 
   int32_t rotaryPositionSinceLastUpdate = 0;
   int32_t rotaryPositionSinceLastReset = 0;
-  bool buttonPressed = false;
+  bool rotaryButtonPressed = false;
+  bool backButtonPressed = false;
+  bool alarmButtonPressed = false;
 
   bool isLightOn = false;
   uint8_t lightBrightnessPercent = 0;

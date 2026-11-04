@@ -99,7 +99,9 @@ void MQTTConnection::publishState() {
   doc["humidity_valid"] = state.humidityValid;
   doc["ambient_light_percent"] = state.ambientLightPercent;
   doc["motion"] = state.motionDetected;
-  doc["button_pressed"] = state.buttonPressed;
+  doc["rotary_button_pressed"] = state.rotaryButtonPressed;
+  doc["back_button_pressed"] = state.backButtonPressed;
+  doc["alarm_button_pressed"] = state.alarmButtonPressed;
   doc["rotary_position"] = state.rotaryPositionSinceLastReset;
   doc["alarm_enabled"] = state.isAlarmSet;
   doc["alarm_hour"] = state.alarmHour;

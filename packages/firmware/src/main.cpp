@@ -25,7 +25,9 @@ DeviceState deviceState;
 
 // Initalise Peripherals
 RotaryEncoder rotary(ROTARY_ENCODER_CLK, ROTARY_ENCODER_DT);
-PushButton buttonA(BTN_A_PIN);
+PushButton rotaryButton(BTN_ROTARY_PIN);
+PushButton backButton(BTN_BACK_PIN);
+PushButton alarmButton(BTN_ALARM_PIN);
 PhotoResistor ldr(LDR_PIN);
 MotionSensor pir(PIR_PIN);
 DHTSensor dht(DHT_PIN);
@@ -41,7 +43,7 @@ WiFiConnection wifi(WIFI_SSID, WIFI_PASSWORD);
 BLEConnection ble(BLE_ADVERTISER_NAME, deviceState, commandRouter);
 MQTTConnection mqtt(wifi, deviceState, commandRouter, MQTT_HOST, MQTT_PORT, MQTT_USERNAME, MQTT_PASSWORD, MQTT_DEVICE_ID);
 
-Peripheral* peripherals[] = {&rotary, &buttonA, &ldr, &pir, &dht, &lights, &oled, &mp3} ;
+Peripheral* peripherals[] = {&rotary, &rotaryButton, &backButton, &alarmButton, &ldr, &pir, &dht, &lights, &oled, &mp3} ;
 Peripheral* connections[] = {&wifi, &ble, &mqtt};
 
 void setup(){
@@ -77,7 +79,9 @@ void updateDeviceState(){
   deviceState.motionDetected = pir.isMotionDetected();
   deviceState.rotaryPositionSinceLastUpdate = rotary.getClicksSinceLastUpdate();
   deviceState.rotaryPositionSinceLastReset = rotary.getClicksSinceReset();
-  deviceState.buttonPressed = buttonA.getIsPushed(); // Revise button implementation
+  deviceState.rotaryButtonPressed = rotaryButton.getIsPushed();
+  deviceState.backButtonPressed = backButton.getIsPushed();
+  deviceState.alarmButtonPressed = alarmButton.getIsPushed();
   deviceState.isLightOn = lights.isOn(); // Maybe redo lights variable name
   deviceState.lightBrightnessPercent = lights.getBrightnessPercent();
   deviceState.lightMode = lights.getMode();
