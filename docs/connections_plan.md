@@ -57,9 +57,9 @@ The firmware already has:
 - input and sensor classes for the rotary encoder, push button, photoresistor,
   motion sensor, and DHT sensor;
 - a `LightArray` output class and `DeviceState`;
-- a substantially implemented `BLEConnection`, an incomplete
-  `WiFiConnection`, an MQTT wrapper wired into `main.cpp`, and a telemetry
-  publisher;
+- `WiFiConnection`, `BLEConnection`, and `MQTTConnection` transports (MQTT
+  also publishes telemetry), plus a `CommandRouter` that applies commands from
+  both BLE and MQTT;
 - local time synchronization in `WiFiConnection`.
 
 The connection plan should extend these existing patterns rather than make
@@ -111,9 +111,9 @@ the accessors needed by the current telemetry snapshot.
 
 - [x] Add stable field names, units, expected ranges, sampling periods, and
   simple value behavior for the selected telemetry fields.
-- [x] Copy peripheral values into `DeviceState` through
-  `DeviceStateUpdater`.
-- [ ] Keep connectivity classes reading the state model rather than GPIO or
+- [x] Copy peripheral values into `DeviceState` in `updateDeviceState()`
+  (`main.cpp`).
+- [x] Keep connectivity classes reading the state model rather than GPIO or
   driver internals.
 
 Keep the existing hardware classes responsible for hardware access:
@@ -127,14 +127,11 @@ Keep the existing hardware classes responsible for hardware access:
 | `OledScreen` | current screen or display mode if useful for status |
 
 Add clear read/accessor methods or a common snapshot method to these classes
-only where needed. `main.cpp` updates the peripherals, while
-`DeviceStateUpdater` copies their values into `DeviceState`; connectivity
-classes read the state model, not GPIO or driver internals.
-
-`DeviceStateUpdater` is constructed with references to the shared state,
-connectivity wrappers, and sensor/input peripherals. Its non-blocking
-`update()` method synchronizes Wi-Fi and BLE status, DHT readings and
-validity, ambient light, motion, button, and rotary position.
+only where needed. `main.cpp` updates the peripherals, and its
+`updateDeviceState()` copies their values into `DeviceState` once per loop:
+Wi-Fi and BLE status, time, DHT readings and validity, ambient light, motion,
+button, rotary position, and light output. Connectivity classes read the
+state model, not GPIO or driver internals.
 
 The setup phase should define, for every published value:
 
@@ -146,57 +143,44 @@ The setup phase should define, for every published value:
 
 ### 3. `BLEConnection`
 
-Status: `Partial`. The firmware creates a service, advertises, tracks
-connections, exposes status/alarm/device-info characteristics, validates JSON
-commands, queues accepted writes, and sends acknowledgements. It does not yet
-apply queued commands, expose all important readings, or use the UUIDs listed
-in this plan.
+Status: `Implemented`. One versioned service with three characteristics.
+Command writes go straight to `CommandRouter::submit()`, which validates and
+queues them, and the result is notified back on the same characteristic.
+BLE callbacks run on the Bluetooth task (core 0), so they only set the
+connected flag and submit commands. Everything else (state JSON,
+notifications, the connect sound) runs on the main loop.
 
-Expand `BLEConnection` into the local phone-facing transport.
+| Characteristic | UUID | Properties | Content |
+|---|---|---|---|
+| service | `75c3662a-606b-417c-a9a2-3f268ef96579` | | |
+| `state` | `b707bc8f-92f4-4f46-81c2-a34788fd7382` | read + notify | compact JSON snapshot, refreshed every second and notified only when it changes |
+| `command` | `fbaee8da-4ab7-4a1b-9264-438885e96408` | write + notify | write a command (see section 7); the acknowledgement is notified back here |
+| `info` | `3f52dc07-56d2-4141-b8fa-f7355972d74e` | read | device name, firmware version, protocol version |
 
-Proposed responsibilities:
+`state` example:
 
-- initialize the BLE device name from configuration;
-- create one versioned Sunrise Clock service;
-- advertise and track connection/disconnection state;
-- expose read-only status and telemetry characteristics;
-- expose writable configuration/command characteristics;
-- notify subscribed clients when selected values change;
-- validate all writes before passing them to the application command layer;
-- report malformed, out-of-range, or stale commands explicitly.
+```json
+{"alarm_enabled":true,"alarm_hour":6,"alarm_minute":30,"light_mode":"STEADY","light_brightness_percent":50,"temperature_c":24.5,"humidity_percent":48.2}
+```
 
-Suggested characteristics:
+Acknowledgement examples:
 
-| Characteristic | Direction | Purpose |
-|---|---|---|
-| `status` | read + notify | connection state, current mode, alarm status |
-| `alarm_config` | read + write + notify | enabled state and alarm hour/minute |
-| `light_control` | write + notify | brightness/mode requests and acknowledgement |
-| `device_info` | read | device ID, firmware version, protocol version |
+```json
+{"command_id":"alarm-001","accepted":true}
+{"command_id":"alarm-002","accepted":false,"error":"invalid_alarm"}
+```
 
-The firmware uses the following versioned service and characteristic UUIDs:
-
-| UUID | Characteristic |
-|---|---|
-| `75c3662a-606b-417c-a9a2-3f268ef96579` | service |
-| `b707bc8f-92f4-4f46-81c2-a34788fd7382` | status |
-| `0a8b765b-73ac-4813-8441-dbe23e992974` | alarm configuration |
-| `7292c4d1-c619-4075-8954-0535d9d1aebf` | light control |
-| `3f52dc07-56d2-4141-b8fa-f7355972d74e` | device information |
-| `804687da-761a-42ec-b67b-a4c635ef9f85` | command acknowledgement |
-
-Use compact JSON with `protocol_version: 1`. Alarm writes contain
-`command_id`, `enabled`, `hour` (`0..23`), and `minute` (`0..59`). Light
-writes contain `command_id`, `brightness_percent` (`0..100`), and `mode`.
-Acknowledgements contain `command_id`, `accepted`, and `message`. The firmware
-validates these fields and enqueues accepted commands; callbacks never apply
-long-running hardware work directly.
+Notifications are cut to the negotiated MTU minus 3 bytes (182 bytes on iOS,
+20 bytes on Android unless the app requests a larger MTU), so `state` stays
+under about 180 bytes. The full snapshot goes over MQTT.
 
 ### 4. `WiFiConnection`
 
-Status: `Partial`. Station mode, credential use, initial connection request,
-time-zone/NTP setup, and connection/time getters are implemented. Reconnect
-management, IP/RSSI/failure reporting, and `update()`-based recovery are not.
+Status: `Partial`. Station mode, credential use, the initial connection
+request, time-zone/NTP setup, and the connection, time, and RSSI getters are
+implemented. Recovery works too: the ESP32 core reconnects after most drops,
+and `update()` calls `WiFi.reconnect()` every 30 seconds for the drops the core
+gives up on. IP and last-failure reporting are not implemented.
 
 Complete the existing Wi-Fi wrapper as the transport manager.
 
@@ -214,11 +198,12 @@ provide the network readiness required by `MQTTConnection`.
 
 ### 5. `MQTTConnection`
 
-Status: `Partial`. `MQTTConnection` exists with topic construction, Wi-Fi
-gating, reconnect backoff, command subscription, payload-size/protocol/range
-validation, command queuing, and telemetry publishing. It is
-constructed and updated by `main.cpp`; application command routing and full
-Wi-Fi recovery remain incomplete.
+Status: `Implemented`. `MQTTConnection` builds its topics from the device
+ID and only connects while Wi-Fi is up. It reconnects with backoff (1 s,
+doubling to 60 s) and resubscribes after every reconnect. Command payloads go
+to `CommandRouter::submit()`, and telemetry is published as described in
+section 6. It uses plain MQTT over `WiFiClient`; TLS was removed for the lab
+network.
 
 Create a dedicated MQTT wrapper, for example:
 
@@ -229,50 +214,46 @@ packages/firmware/src/connectivity/MQTTConnection.cpp
 
 Proposed responsibilities:
 
-- configure broker address, port/TLS settings, credentials, and client ID;
+- configure broker address, port, credentials, and client ID (the device ID);
 - connect only when Wi-Fi is ready;
 - reconnect with bounded backoff;
 - call the MQTT client loop frequently from the main loop;
 - resubscribe to command topics after every reconnect;
-- validate topic, payload size, protocol version, and command shape;
-- enqueue accepted commands for application processing;
+- check the topic and pass command payloads to `CommandRouter`, which
+  validates and queues them;
 - publish simple telemetry without blocking sensing.
 
 Use a unique device ID in the client ID and topic namespace. Keep broker
 credentials in the ignored secrets/configuration path.
 
-### 6. `TelemetryPublisher`
+### 6. Telemetry
 
-Status: `[x]` Implemented. `TelemetryPublisher` serializes a bounded,
-versioned `DeviceState` snapshot and publishes it through `MQTTConnection`.
+Status: `Implemented` in `MQTTConnection::publishState()`. The separate
+`TelemetryPublisher` class was folded in: serializing `DeviceState` is one
+ArduinoJson function, and the schedule is three lines in
+`MQTTConnection::update()`.
 
-Create a separate publisher/serializer so MQTT transport and data modeling are
-not coupled.
+Telemetry is published on every (re)connect, every 120 seconds
+(`TELEMETRY_INTERVAL_MS` in `MQTTConnection.cpp`), and straight after a
+command changes state (`main.cpp` calls `publishState()`). It does not publish
+on every sensor change. RSSI and the light level change almost every loop,
+and diffing the payload used to flood the broker. If motion events need to
+reach Grafana between intervals, call `mqtt.publishState()` from `loop()` when
+motion starts.
 
-Proposed responsibilities:
-
-- take a snapshot from `DeviceState`;
-- serialize simple, stable JSON with meaningful sensor and actuator fields;
-- publish at a scheduled interval and when important state changes;
-- include DHT temperature/humidity validity only;
-- include `device_id`, `location` (if used), protocol version, and state;
-- publish health data such as uptime, RSSI, and connection status;
-- record publish failures for diagnostics.
-
-The firmware publishes immediately after the MQTT connection becomes
-available when state changes, and otherwise every 120 seconds by default.
-The interval is configured in `MQTTConnection`, not in `secrets.h`. Invalid
-DHT readings are represented by `null` values with explicit validity fields.
-Other peripheral values do not have separate validity fields.
-
-The first payload should cover all meaningful project data, for example:
+Readings are rounded to one decimal place. Invalid DHT readings are `null`
+and have explicit validity fields; other values have none. Payload:
 
 ```json
 {
+  "protocol_version": 1,
   "device_id": "sunrise-clock-01",
+  "firmware_version": "1.0.0",
   "temperature_c": 24.5,
+  "temperature_valid": true,
   "humidity_percent": 48.2,
-  "ambient_light_percent": 63.0,
+  "humidity_valid": true,
+  "ambient_light_percent": 63,
   "motion": false,
   "button_pressed": false,
   "rotary_position": 12,
@@ -281,125 +262,112 @@ The first payload should cover all meaningful project data, for example:
   "alarm_minute": 30,
   "light_on": true,
   "light_brightness_percent": 72,
+  "light_mode": "STEADY",
+  "sound_on": true,
   "screen": "HOME",
   "wifi_connected": true,
+  "wifi_rssi": -58,
   "ble_connected": false,
-  "state": "NORMAL"
+  "time_synced": true,
+  "uptime_ms": 123456
 }
 ```
 
 ### 7. `CommandRouter`
 
-Status: `Implemented for BLE and MQTT`. Both communication command queues are
-routed through the shared application boundary. Physical-control commands and
-the future alarm controller remain planned extensions.
+Status: `Implemented for BLE and MQTT`. Physical-control commands and the
+future alarm controller remain planned extensions.
 
-`CommandRouter` is the application-level command boundary. It is separate
-from the `Connections` interface:
+`CommandRouter` is the single entry point for commands. Transports are thin
+pipes: they hand the raw JSON to `submit()` and never parse it themselves.
 
-| Component | Responsibility |
-|---|---|
-| `Connections` | Shared `begin()` and non-blocking `update()` lifecycle for communication transports |
-| `CommandRouter` | Decide what an accepted command means to the clock and apply it to application state or control services |
+- `submit(json, length)` parses the JSON with ArduinoJson, validates it, and
+  queues it on a 4-slot FreeRTOS queue. It is safe to call from any task,
+  which matters because BLE callbacks run on a different core from `loop()`.
+  It returns the `command_id` plus an error code, or no error if the command
+  was queued. BLE uses this to acknowledge immediately; MQTT logs rejections.
+- `update()` runs from `loop()` and applies every queued command. It returns
+  `true` if anything was applied, so `main.cpp` can push the new state to BLE
+  and MQTT straight away.
 
-`Connections` remains small and transport-agnostic. It is used by
-`WiFiConnection`, `BLEConnection`, and `MQTTConnection` so `main.cpp` can
-start and maintain each service uniformly. It must not know about alarms,
-lights, audio, sensors, or command semantics.
+Command JSON, the same for every transport:
 
-`CommandRouter` consumes commands queued by BLE and MQTT and applies the same
-application rules to both transports. It should eventually consume commands
-from physical controls as well. It should not parse BLE characteristics,
-manage MQTT topics, or access hardware drivers directly.
+```json
+{"protocol_version":1,"command_id":"alarm-001","type":"set_alarm","enabled":true,"hour":6,"minute":30}
+{"protocol_version":1,"command_id":"light-001","type":"set_light","brightness_percent":50,"mode":"STEADY"}
+```
 
-Current responsibilities:
+`hour` is `0..23`, `minute` is `0..59`, `brightness_percent` is `0..100`, and
+`mode` is `OFF`, `STEADY`, or `SUNRISE`. Everything is validated before the
+command is queued, so each command gets exactly one acknowledgement and
+applying it cannot fail.
 
-- consume queued BLE commands;
-- consume queued MQTT commands;
-- apply validated alarm configuration to `DeviceState`;
-- apply supported light commands through `LightArray`;
-- notify the BLE client when BLE application state changes;
-- return explicit rejections for unsupported light modes through the originating
-  transport.
+Error codes:
 
-Planned responsibilities:
+- `payload_too_large`: over 256 bytes;
+- `invalid_json`;
+- `unsupported_protocol`;
+- `invalid_command_id`: missing, or longer than 32 characters;
+- `unsupported_command`;
+- `invalid_alarm`;
+- `invalid_light`;
+- `queue_full`;
+- `not_ready`: `submit()` was called before `begin()`.
+
+Planned extensions:
 
 - consume commands from physical controls;
-- extend the transport-neutral command type beyond the current
-  `BLECommand` name;
-- expand application-level validation beyond the range checks already
-  performed by BLE and MQTT parsers;
-- distinguish configuration commands from immediate control commands;
-- update `DeviceState` only after all validation succeeds;
 - apply alarm changes through an alarm controller once the local alarm state
-  machine is implemented;
-- apply light changes through `LightArray`, without accessing NeoPixel
-  implementation details;
-- route audio settings or playback requests through `Mp3Player` or a future
-  audio controller;
-- reject duplicate, stale, malformed, unsupported, or unsafe commands;
-- return consistent `queued`, `applied`, `rejected`, or `failed` results to
-  the originating transport.
+  machine exists;
+- route audio settings or playback requests through `Mp3Player`;
+- reject duplicate or stale commands if that becomes necessary.
 
-The router is an application coordinator rather than a hardware driver.
-BLE-specific behavior stays in `BLEConnection`, MQTT-specific behavior stays
-in `MQTTConnection`, LED rendering stays in `LightArray`, and DFPlayer serial
-communication stays in `Mp3Player`.
+The router is an application coordinator rather than a hardware driver. LED
+rendering stays in `LightArray`, and DFPlayer serial communication stays in
+`Mp3Player`.
 
-The current command structure is named `BLECommand` because BLE was
-implemented first. MQTT now uses the same structure. Rename it to a
-transport-neutral type such as `DeviceCommand` when physical controls or
-additional command sources are added.
+### 8. Lifecycle interface
 
-### 8. `Connections` interface
-
-Status: `[x]` Implemented in `include/Connections.h`. The existing
-`Connections` interface provides the shared `begin()` and non-blocking
-`update()` lifecycle used by `WiFiConnection`, `BLEConnection`, and future
-connection classes. `main.cpp` currently stores connection implementations in
-the `Connections* connections[]` collection and calls them through this
-interface.
-
-`Connections` is not responsible for routing application commands. That
-responsibility belongs to `CommandRouter`. No separate `ConnectionManager`
-class is required. If transport coordination becomes necessary, it should be
-implemented through the existing `Connections` abstraction or directly in
-`main.cpp` without hiding peripheral timing or preventing local control
-updates when a connection is unavailable.
+`WiFiConnection`, `BLEConnection`, and `MQTTConnection` implement the same
+`Peripheral` interface as the hardware classes: `begin()` plus a non-blocking
+`update()`. `main.cpp` keeps them in their own `connections[]` array so the
+start order stays explicit. The old `Connections` interface was identical, so
+it was removed.
 
 ## Communication contracts
 
 ### Local BLE path
 
-Status: `Partial`. The phone can read alarm/status/device information and
-receive queued-command acknowledgements. BLE alarm and light commands pass
-through `CommandRouter`; MQTT uses the same router through its command topic.
-Physical-control routing remains future work.
+Status: `Partial`. The phone can read `state` and `info`, write commands, and
+receive acknowledgements and state notifications. BLE and MQTT commands go
+through the same `CommandRouter`. Physical-control routing remains future
+work.
 
 ```text
 Phone
-  -> alarm_config write -> BLEConnection
-  -> validated command queue -> CommandRouter
-  -> DeviceState / local alarm and light control
-  -> acknowledgement + status notification -> phone
+  -> command write -> BLEConnection (BLE task)
+  -> CommandRouter::submit(): validate + queue
+  -> acknowledgement notify -> phone
+loop()
+  -> CommandRouter::update() -> DeviceState / LightArray
+  -> state notify -> phone
 ```
 
-The phone should be able to read the current alarm configuration and all
-important current readings. Notifications should be used for changes rather
-than requiring continuous polling. BLE is the primary local configuration
-method; serial output may remain as a development diagnostic interface.
+The phone can read the alarm, light, and temperature/humidity values.
+Changes arrive as notifications, so the phone doesn't need to poll. BLE is the
+primary local configuration method; serial output may remain as a
+development diagnostic interface.
 
 ### Global MQTT path
 
 Status: `Partial`. The MQTT wrapper uses the planned topic namespace, is wired
-into the firmware lifecycle, and queues validated commands for
-`CommandRouter`. End-to-end broker, Telegraf, InfluxDB, and Grafana validation
-remains incomplete.
+into the firmware lifecycle, and passes commands to `CommandRouter`.
+End-to-end broker, Telegraf, InfluxDB, and Grafana validation remains
+incomplete.
 
 ```text
 DeviceState
-  -> TelemetryPublisher
-  -> MQTTConnection
+  -> MQTTConnection::publishState()
   -> MQTT broker
   -> Telegraf mqtt_consumer
   -> InfluxDB measurement
@@ -408,8 +376,8 @@ DeviceState
 MQTT command client
   -> sunrise-clock/{device_id}/command
   -> MQTTConnection
-  -> CommandRouter
-  -> DeviceState / LightArray
+  -> CommandRouter::submit(): validate + queue
+  -> CommandRouter::update() -> DeviceState / LightArray
 ```
 
 Use a stable namespace such as:
@@ -420,11 +388,11 @@ sunrise-clock/{device_id}/command
 ```
 
 The telemetry topic is for measurements and status. The command topic accepts
-the versioned `set_alarm` and `set_light` commands, which are validated and
-queued by `MQTTConnection` and applied by `CommandRouter`. MQTT command
-handling must not be treated as a replacement for the local alarm state
-machine. Command results are reflected in the next telemetry snapshot; BLE
-commands retain their existing acknowledgement and notification path.
+the same versioned `set_alarm` and `set_light` JSON as BLE, which
+`CommandRouter` validates, queues, and applies. MQTT command handling must not
+be treated as a replacement for the local alarm state machine. MQTT has no
+acknowledgement topic: rejections are logged to Serial, and an applied command
+triggers an immediate telemetry publish.
 
 ## Telegraf, InfluxDB, and Grafana setup plan
 
@@ -468,7 +436,7 @@ temperature and humidity with DHT-only validity fields, calibrated ambient
 light percentage, motion state, light output state/brightness/mode, display
 state, and relevant alarm and connection status. Raw photoresistor ADC values
 and validity fields for non-DHT peripherals are not published. Telemetry is
-published on important state changes and every 120 seconds by default.
+published on connect, after each applied command, and every 120 seconds.
 
 ### Phase 2: Prepare configuration
 
@@ -478,12 +446,10 @@ published on important state changes and every 120 seconds by default.
 - [x] Verify that credentials are not committed.
 - [x] Choose and verify whether the broker uses TLS for the target deployment.
 
-The current target is plain MQTT on the trusted local lab network. The
-configuration retains `MQTT_USE_TLS` and `MQTT_ROOT_CERTIFICATE` so a later
-deployment can enable TLS without changing the MQTT class interface. The
-telemetry interval is configured through
-`MQTTConnection::DEFAULT_TELEMETRY_INTERVAL_MS`, alongside the MQTT transport
-configuration rather than the secrets file.
+The current target is plain MQTT on the trusted local lab network, so TLS was
+removed. Adding it later means swapping `WiFiClient` for `WiFiClientSecure`
+and calling `setCACert()`. The telemetry interval is `TELEMETRY_INTERVAL_MS`
+in `MQTTConnection.cpp`, not the secrets file.
 `secrets.h` is intentionally local-only and is excluded by `.gitignore`, as
 confirmed during implementation. A repository-history audit is still prudent
 before publishing the repository.
@@ -494,54 +460,54 @@ before publishing the repository.
 - [x] Add read accessors or snapshots to all required peripheral classes.
 - [x] Expand `BLEConnection` and add the initial `WiFiConnection` interface.
 - [x] Add the `MQTTConnection` header.
-- [x] Add the `TelemetryPublisher` header and implementation.
+- [x] Publish telemetry from `MQTTConnection` (the separate
+  `TelemetryPublisher` was folded in).
 - [x] Add the `CommandRouter` for BLE and MQTT alarm and light commands.
-- [x] Add `DeviceStateUpdater` to keep peripheral synchronization out of
-  `main.cpp`.
-- [x] Define the connection lifecycle abstraction in `include/Connections.h`.
+- [x] Copy peripheral values into `DeviceState` in `updateDeviceState()`.
+- [x] Use the `Peripheral` lifecycle for connections too.
 - [x] Define connection ownership and update order in `main.cpp`.
 
-`DeviceStateUpdater` now owns the snapshot boundary for sensor, input, Wi-Fi
-health, and `LightArray` output values. Connectivity adapters consume this
-state rather than reading peripheral drivers directly.
+`updateDeviceState()` in `main.cpp` owns the snapshot boundary for sensor,
+input, Wi-Fi health, and `LightArray` output values. Connectivity adapters
+read this state rather than reading peripheral drivers directly.
 
 ### Phase 4: Integrate local communication
 
 - [x] Initialize BLE during firmware setup.
-- [x] Expose status, telemetry, alarm configuration, and light control
-  completely.
+- [x] Expose state, commands, and device info.
 - [x] Route phone writes through `CommandRouter`.
 - [ ] Test read, write, notify, invalid input, reconnect, and restart behavior.
 
 Phase 4 verification cases:
 
-1. Read `status`, `alarm_config`, and `device_info` after connecting.
-2. Write a valid alarm command and verify the acknowledgement, updated
-   `alarm_config`, and status notification.
+1. Read `state` and `info` after connecting, then subscribe to `state` and
+   `command` notifications.
+2. Write a valid alarm command to `command`. Verify one acknowledgement
+   (`accepted: true`) and a `state` notification showing the new alarm.
 3. Write valid `OFF`, `STEADY`, and `SUNRISE` light commands at brightness
    values `0`, `50`, and `100`; verify the LED output and notification.
-4. Write malformed JSON, unsupported protocol versions, invalid alarm ranges,
-   invalid brightness, and unsupported light modes; verify rejection.
+4. Write malformed JSON, an unsupported protocol version, invalid alarm
+   ranges, invalid brightness, and an unsupported light mode. Verify a single
+   `accepted: false` acknowledgement with the matching error each time.
 5. Disconnect and reconnect the phone; verify advertising resumes and reads
    return current runtime state.
 6. Restart the ESP32 and verify configuration returns to defaults because
    Phase 4 intentionally does not persist settings.
 
-LightBlue test payloads:
+LightBlue test payloads (write each one to `command`):
 
 ```json
-{"protocol_version":1,"command_id":"alarm-001","enabled":true,"hour":6,"minute":30}
-{"protocol_version":1,"command_id":"light-001","brightness_percent":50,"mode":"STEADY"}
-{"protocol_version":1,"command_id":"light-002","brightness_percent":100,"mode":"SUNRISE"}
-{"protocol_version":1,"command_id":"light-003","brightness_percent":0,"mode":"OFF"}
+{"protocol_version":1,"command_id":"alarm-001","type":"set_alarm","enabled":true,"hour":6,"minute":30}
+{"protocol_version":1,"command_id":"light-001","type":"set_light","brightness_percent":50,"mode":"STEADY"}
+{"protocol_version":1,"command_id":"light-002","type":"set_light","brightness_percent":100,"mode":"SUNRISE"}
+{"protocol_version":1,"command_id":"light-003","type":"set_light","brightness_percent":0,"mode":"OFF"}
+{"protocol_version":1,"command_id":"bad-001","type":"set_alarm","enabled":true,"hour":24,"minute":0}
 ```
 
-Write the alarm payload to `alarm_config` and light payloads to
-`light_control`. Subscribe to `command acknowledgement`, `status`,
-`alarm_config`, and `light_control` notifications before writing. Each valid
-write should first acknowledge `accepted: true` with `message: "queued"`,
-then produce the corresponding state notification after the main loop applies
-the command.
+Subscribe to `command` and `state` before writing. Each write produces exactly
+one acknowledgement on `command`. A valid write is followed by a `state`
+notification once the main loop applies it. The same payloads work on the
+MQTT command topic.
 
 ### Phase 5: Integrate global communication
 
@@ -567,25 +533,28 @@ the command.
 
 ## Main-loop integration order
 
-Status: `Partial`. Peripheral updates, connection maintenance, state
-synchronization, telemetry publishing, and BLE/MQTT command routing are now
-processed in the main loop. The local alarm state machine still needs to be
-added.
+Status: `Partial`. The local alarm state machine still needs to be added.
 
-The eventual loop should remain non-blocking and follow this order:
+The loop stays non-blocking and runs in this order:
 
 1. [x] Update/read peripherals on their own schedules.
-2. [ ] Update local state and apply local alarm/light control.
-3. [x] Process queued BLE commands.
-4. [x] Process queued MQTT commands through `CommandRouter`.
-5. [x] Run BLE and MQTT client maintenance.
-6. [x] Synchronize peripheral values through `DeviceStateUpdater`.
-7. [x] Publish scheduled or changed telemetry through `TelemetryPublisher`.
-8. [ ] Update display/diagnostic output.
+2. [x] Run Wi-Fi, BLE, and MQTT maintenance (MQTT's client loop may submit
+   commands).
+3. [x] Apply queued BLE and MQTT commands with `CommandRouter::update()`.
+4. [x] Copy peripheral and connection values into `DeviceState` with
+   `updateDeviceState()`.
+5. [x] Play the BLE connect sound when a phone connects.
+6. [x] If a command was applied, notify BLE `state` and publish MQTT telemetry
+   straight away.
+7. [ ] Apply local alarm/light control.
+8. [ ] Update display/diagnostic output (only the home screen so far).
 
 No connection failure should prevent peripheral updates or state
 synchronization. Avoid long delays in connection callbacks, BLE callbacks,
-sensor reads, state synchronization, or MQTT serialization.
+sensor reads, state synchronization, or MQTT serialization. One known stall:
+while the broker is unreachable, each MQTT connect attempt can block the loop
+for up to about 3 seconds (the `WiFiClient` connect timeout). The backoff
+limits this to about once a minute.
 
 ## Definition of done for the setup phase
 
