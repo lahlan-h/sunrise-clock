@@ -14,7 +14,9 @@ class WiFiConnection : public Connections {
 
     void connect();
     void disconnect();
-    
+      
+    int8_t getRSSI() const;
+
     const char* getSSID() const;
 
     bool getTime(tm& currentTime) const;

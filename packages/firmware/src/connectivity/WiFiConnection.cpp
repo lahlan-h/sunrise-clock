@@ -21,6 +21,10 @@ void WiFiConnection::disconnect(){
   WiFi.disconnect();
 }
 
+int8_t WiFiConnection::getRSSI() const {
+  return WiFi.RSSI();
+}
+
 const char* WiFiConnection::getSSID() const {
   return ssid;
 }
