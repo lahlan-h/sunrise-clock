@@ -242,37 +242,39 @@ reach Grafana between intervals, call `mqtt.publishState()` from `loop()` when
 motion starts.
 
 Readings are rounded to one decimal place. Invalid DHT readings are `null`
-and have explicit validity fields; other values have none. Payload:
+and have explicit validity fields; other values have none. Keys match the
+`DeviceState` member names, except `protocolVersion` and `deviceId`, which
+come from `CommandRouter` and `MQTTConnection`. Payload:
 
 ```json
 {
-  "protocol_version": 1,
-  "device_id": "sunrise-clock-01",
-  "firmware_version": "1.0.0",
-  "temperature_c": 24.5,
-  "temperature_valid": true,
-  "humidity_percent": 48.2,
-  "humidity_valid": true,
-  "ambient_light_percent": 63,
-  "motion": false,
-  "rotary_button_pressed": false,
-  "back_button_pressed": false,
-  "alarm_button_pressed": false,
-  "rotary_position": 12,
-  "alarm_enabled": true,
-  "alarm_hour": 6,
-  "alarm_minute": 30,
-  "light_on": true,
-  "light_brightness_percent": 72,
-  "light_mode": "STEADY",
-  "sound_on": true,
+  "protocolVersion": 1,
+  "deviceId": "sunrise-clock-01",
+  "firmwareVersion": "1.0.0",
+  "temperature": 24.5,
+  "temperatureValid": true,
+  "humidity": 48.2,
+  "humidityValid": true,
+  "ambientLightPercent": 63,
+  "motionDetected": false,
+  "rotaryButtonPressed": false,
+  "backButtonPressed": false,
+  "alarmButtonPressed": false,
+  "rotaryPositionSinceLastReset": 12,
+  "isAlarmSet": true,
+  "alarmHour": 6,
+  "alarmMinute": 30,
+  "isLightOn": true,
+  "lightBrightnessPercent": 72,
+  "lightMode": "STEADY",
+  "isSoundOn": true,
   "volume": 20,
   "screen": "HOME",
-  "wifi_connected": true,
-  "wifi_rssi": -58,
-  "ble_connected": false,
-  "time_synced": true,
-  "uptime_ms": 123456
+  "isWifiConnected": true,
+  "wifiRssi": -58,
+  "isBluetoothConnected": false,
+  "isTimeSynced": true,
+  "upTimeMs": 123456
 }
 ```
 
