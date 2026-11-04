@@ -1,8 +1,9 @@
 #pragma once
 
 #include <Arduino.h>
-#include <DeviceState.h>
 #include <U8g2lib.h>
+
+#include <DeviceState.h>
 #include <Peripheral.h>
 
 class OledScreen : public Peripheral {
@@ -14,8 +15,8 @@ class OledScreen : public Peripheral {
     void drawHome(const DeviceState& state);
     void drawWakeUp();
     void drawSettings();
-    void drawSongsList();
-    
+    void drawSongList(const char* const songNames[], uint8_t songCount, uint8_t selectedSong, uint8_t firstVisibleSong);
+
     /* 
     void drawSongList(
       const char* const songNames[],
