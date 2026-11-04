@@ -29,7 +29,7 @@ Mp3Player::Mp3Player(uint8_t rxPin, uint8_t txPin)
 void Mp3Player::begin() {
   mp3Serial.begin(9600, SERIAL_8N1, rxPin, txPin);
   player.begin(mp3Serial);
-  player.volume(30);
+  player.volume(volume);
 }
 
 void Mp3Player::play(uint16_t track) {
@@ -60,6 +60,15 @@ void Mp3Player::pause() {
   player.pause();
 }
 
+void Mp3Player::setVolume(uint8_t volume) {
+  if (volume > maxVolume) {
+    volume = maxVolume;
+  }
+
+  this->volume = volume;
+  player.volume(volume);
+}
+
 uint8_t Mp3Player::getTrackCount() const {
   return songCount;
 }
@@ -71,4 +80,8 @@ const char* Mp3Player::getSongName(uint8_t trackIndex) const {
 
 uint8_t Mp3Player::getEffectCount() const {
   return effectCount;
+}
+
+uint8_t Mp3Player::getVolume() const {
+  return volume;
 }
