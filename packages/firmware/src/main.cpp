@@ -22,6 +22,8 @@
 
 static const uint8_t BRIGHTNESS_STEP_PERCENT = 5;
 static const uint8_t BLUETOOTH_CONNECTED_EFFECT = 6; 
+static const uint8_t ROTARY_PRESS_EFFECT = 4;
+static const uint8_t ROTARY_TURN_EFFECT = 2;
 static const uint8_t MAIN_MENU_ITEM_COUNT = 5;
 static const uint8_t HOURS_PER_DAY = 24;
 static const uint8_t MINUTES_PER_HOUR = 60;
@@ -165,6 +167,10 @@ void loop(){
   updateDeviceState();
 
   if (deviceState.isBluetoothConnected && !wasBluetoothConnected) mp3.playEffect(BLUETOOTH_CONNECTED_EFFECT);
+
+  // Before the screen switch, so a screen that plays a song (e.g. the song picker) overrides the effect
+  if (rotaryButton.wasPressed()) mp3.playEffect(ROTARY_PRESS_EFFECT);
+  if (rotary.getClicksSinceLastUpdate() != 0) mp3.playEffect(ROTARY_TURN_EFFECT);
 
   // Push changes out now rather than waiting for the next scheduled refresh
   if (commandApplied) {
