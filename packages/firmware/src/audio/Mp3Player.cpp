@@ -33,14 +33,42 @@ void Mp3Player::begin() {
 }
 
 void Mp3Player::play(uint16_t track) {
-  player.play(track);
+  if (track == 0 || track > songCount) {
+    return;
+  }
+
+  playSong(static_cast<uint8_t>(track));
+}
+
+void Mp3Player::playSong(uint8_t track) {
+  if (track == 0 || track > songCount) {
+    return;
+  }
+
+  player.playFolder(songsFolder, track);
+}
+
+void Mp3Player::playEffect(uint8_t effect) {
+  if (effect == 0 || effect > effectCount) {
+    return;
+  }
+
+  player.playFolder(effectsFolder, effect);
+}
+
+void Mp3Player::pause() {
+  player.pause();
 }
 
 uint8_t Mp3Player::getTrackCount() const {
-  return trackCount;
+  return songCount;
 }
 
 const char* Mp3Player::getSongName(uint8_t trackIndex) const {
-  if (trackIndex < trackCount - 1 || trackIndex > trackCount - 1) return nullptr;
+  if (trackIndex < 0 || trackIndex > songCount - 1) return nullptr;
   return songNames[trackIndex];
+}
+
+uint8_t Mp3Player::getEffectCount() const {
+  return effectCount;
 }

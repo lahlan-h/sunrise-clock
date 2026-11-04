@@ -29,6 +29,7 @@ class MotionSensor : public Peripheral {
     void reset();
 
     bool motionJustStarted() const;
+    bool isMotionDetected() const;
 
   private:
     uint8_t pirPin;

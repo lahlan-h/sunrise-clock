@@ -7,6 +7,7 @@ static const uint8_t VISIBLE_ROWS = 6;
 OledScreen::OledScreen(uint8_t sdaPin, uint8_t sclPin, uint8_t i2cAddress)
 : u8g2(U8G2_R0, U8X8_PIN_NONE, sclPin, sdaPin) {
   u8g2.setI2CAddress(i2cAddress << 1); // i2c addresses are 7-bits, U8G2 library expects 8-bits
+  u8g2.setI2CAddress(i2cAddress << 1); // i2c addresses are 7-bits, U8G2 library expects 8-bits
 }
 
 void OledScreen::begin() {

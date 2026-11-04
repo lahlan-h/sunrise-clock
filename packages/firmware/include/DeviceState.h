@@ -18,17 +18,28 @@ struct DeviceState {
 
   const char* firmware_version = "0.0.0";
   unsigned long uptime = 0;
-  uint16_t errors = 0;
   
-  const char* ssid = "";
-  const char* ble_advertiser_name = "";
+  uint16_t errors = 0;
+  int16_t wifiRssi = 0;
+  int32_t rotaryPosition = 0;
 
-  bool isWifiConnected = false;
-  bool isBluetoothConnected = false;
-  bool isAlarmSet = true;
-  bool isSoundOn = true;
-  bool isTimeSynced = false;
+  const const char* ssid = "";
+  const const char* ble_advertiser_name = "";
+  const char* firmwareVersion = "1.0.0";
 
   float temperature = NAN;
   float humidity = NAN;
+
+  int ambientLightPercent = 0;
+
+
+  bool motionDetected = false;
+  bool buttonPressed = false;
+  bool temperatureValid = false;
+  bool humidityValid = false;
+  bool isWifiConnected = false;
+  bool isBluetoothConnected = false;
+  bool isAlarmSet = false;
+  bool isSoundOn = true;
+  bool isTimeSynced = false;
 };
