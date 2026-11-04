@@ -2,6 +2,7 @@
 
 // A KY-040 passes through all 4 pin states per click
 static const int32_t transitionsPerClick = 4;
+static const uint8_t ROTARY_TURN_EFFECT = 2;
 
 RotaryEncoder::RotaryEncoder(uint8_t clkPin, uint8_t dtPin)
 : clkPin(clkPin), dtPin(dtPin) {}
@@ -20,6 +21,10 @@ void RotaryEncoder::update(){
 
   clicksSinceLastUpdate = clicksNow - clicksSinceReset;
   clicksSinceReset = clicksNow;
+
+  if (clicksSinceLastUpdate != 0) {
+    mp3.playEffect(ROTARY_TURN_EFFECT);
+  }
 }
 
 void RotaryEncoder::reset(){

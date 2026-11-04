@@ -3,6 +3,9 @@
 #include <Arduino.h>
 #include <ESP32Encoder.h>
 #include <Peripheral.h>
+#include "audio/Mp3Player.h"
+
+extern Mp3Player mp3;
 
 // - - - - - - Warning - - - - - - 
 // Written for a KY-040 module. Power
