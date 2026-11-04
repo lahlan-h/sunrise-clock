@@ -98,7 +98,17 @@ void OledScreen::drawSongPickerScreen(const char *const songNames[], uint8_t son
 }
 
 void OledScreen::drawBrightnessSetterScreen(const DeviceState& deviceState){
-   
+  u8g2.clearBuffer();
+  u8g2.setFontMode(1);
+  u8g2.setBitmapMode(1);
+  u8g2.setDrawColor(1);
+  u8g2.setFont(u8g2_font_6x13_tr);
+  u8g2.drawStr(10, 17, "Set LED Brightness");
+  char brightnessText[5]; // "100%" + terminator
+  snprintf(brightnessText, sizeof(brightnessText), "%u%%", deviceState.lightBrightnessPercent);
+  u8g2.setFont(u8g2_font_timR24_tr);
+  u8g2.drawStr(10, 50, brightnessText);
+  u8g2.sendBuffer();
 }
 
 void OledScreen::drawInfoScreen(const DeviceState& deviceState){

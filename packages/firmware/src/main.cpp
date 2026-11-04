@@ -140,6 +140,7 @@ void loop(){
     case Screen::Brightness_Setter:
       break;
     case Screen::Volume_Setter:
+      oled.drawBrightnessSetterScreen(deviceState);
       break;
     case Screen::Info:
       if(backButton.wasPressed()) deviceState.screen = Screen::Home;
