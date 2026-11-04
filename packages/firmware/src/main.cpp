@@ -12,7 +12,7 @@
 #include "sensor/MotionSensor.h"
 #include "sensor/DHTSensor.h"
 #include "light/LightArray.h"
-#include "screen/oledScreen.h"
+#include "screen/OledScreen.h"
 #include "connectivity/BLEConnection.h"
 #include "connectivity/WiFiConnection.h"
 #include "connectivity/MQTTConnection.h"
@@ -93,11 +93,10 @@ void loop(){
   // Apply commands queued by BLE / MQTT, then refresh the shared state
   bool commandApplied = commandRouter.update();
   bool wasBluetoothConnected = deviceState.isBluetoothConnected;
+  
   updateDeviceState();
 
-  if (deviceState.isBluetoothConnected && !wasBluetoothConnected) {
-    mp3.playEffect(BLUETOOTH_CONNECTED_EFFECT);
-  }
+  if (deviceState.isBluetoothConnected && !wasBluetoothConnected) mp3.playEffect(BLUETOOTH_CONNECTED_EFFECT);
 
   // Push changes out now rather than waiting for the next scheduled refresh
   if (commandApplied) {

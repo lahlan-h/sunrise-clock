@@ -9,19 +9,19 @@ constexpr uint8_t CommandRouter::PROTOCOL_VERSION;
 constexpr size_t CommandRouter::MAX_COMMAND_LENGTH;
 
 namespace {
-const UBaseType_t QUEUE_LENGTH = 4;
-const LightMode LIGHT_MODES[] = {LightMode::Off, LightMode::Steady, LightMode::Sunrise};
+  const UBaseType_t QUEUE_LENGTH = 4;
+  const LightMode LIGHT_MODES[] = {LightMode::Off, LightMode::Steady, LightMode::Sunrise};
 
-bool parseLightMode(const char* name, LightMode& mode) {
-  for (LightMode candidate : LIGHT_MODES) {
-    if (strcmp(name, lightModeName(candidate)) == 0) {
-      mode = candidate;
-      return true;
+  bool parseLightMode(const char* name, LightMode& mode) {
+    for (LightMode candidate : LIGHT_MODES) {
+      if (strcmp(name, lightModeName(candidate)) == 0) {
+        mode = candidate;
+        return true;
+      }
     }
+    return false;
   }
-  return false;
 }
-}  // namespace
 
 CommandRouter::CommandRouter(DeviceState& state, LightArray& lights)
 : state(state), lights(lights) {}
