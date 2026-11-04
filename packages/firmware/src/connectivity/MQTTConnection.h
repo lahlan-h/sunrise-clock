@@ -35,6 +35,8 @@ class MQTTConnection : public Connections {
 
     bool hasPendingCommand() const;
     bool popCommand(BLECommand& command);
+    void acknowledgeCommand(
+        const char* commandId, bool accepted, const char* message);
 
     const char* telemetryTopic() const;
     const char* stateTopic() const;

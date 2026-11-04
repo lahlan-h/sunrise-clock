@@ -124,6 +124,11 @@ bool MQTTConnection::publishTelemetry(const char* payload, bool retained) {
   return true;
 }
 
+void MQTTConnection::acknowledgeCommand(
+    const char* commandId, bool accepted, const char* message) {
+  acknowledge(commandId, accepted, message);
+}
+
 bool MQTTConnection::publishState(const char* payload, bool retained) {
   if (!mqttClient.connected() || payload == nullptr ||
       strlen(payload) >= MAX_PAYLOAD_SIZE) {
@@ -190,7 +195,7 @@ void MQTTConnection::handleMessage(const char* topic, const byte* payload,
     return;
   }
 
-  BLECommand command;
+  BLECommand command = {};
   if (parseCommand(reinterpret_cast<const char*>(payload), length, command) &&
       enqueue(command)) {
     acknowledge(command.commandId, true, "queued");

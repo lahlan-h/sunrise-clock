@@ -50,7 +50,7 @@ TelemetryPublisher telemetry(
     MQTTConnection::DEFAULT_TELEMETRY_INTERVAL_MS);
 DeviceStateUpdater stateUpdater(
     deviceState, wifi, ble, dht, ldr, pir, buttonA, rotary, lights);
-CommandRouter commandRouter(deviceState, ble, lights);
+CommandRouter commandRouter(deviceState, ble, mqtt, lights);
 
 Peripheral* peripherals[] = {&rotary, &buttonA, &ldr, &pir, &dht, &lights, &oled } ;
 Connections* connections[] = {&wifi, &ble, &mqtt};
