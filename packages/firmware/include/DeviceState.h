@@ -13,33 +13,36 @@ enum class Screen {
 };
 
 struct DeviceState {
-  tm currentTime = {};
   Screen screen = Screen::Home;
-
-  const char* firmware_version = "0.0.0";
-  unsigned long uptime = 0;
-  
-  uint16_t errors = 0;
-  int16_t wifiRssi = 0;
-  int32_t rotaryPosition = 0;
-
-  const const char* ssid = "";
-  const const char* ble_advertiser_name = "";
   const char* firmwareVersion = "1.0.0";
+  unsigned long upTimeMs = 0;
+  uint16_t errorCount = 0;
+
+  tm currentTime = {};
+  bool isTimeSynced = false;
+
+  bool isAlarmSet = false;
+  uint8_t alarmHour = 0;
+  uint8_t alarmMinute = 0;
+
+  const char* ssid = "";
+  int16_t wifiRssi = 0;
+  bool isWifiConnected = false;
+
+  const char* bleAdvertiserName = "";
+  bool isBluetoothConnected = false;
 
   float temperature = NAN;
-  float humidity = NAN;
-
-  int ambientLightPercent = 0;
-
-
-  bool motionDetected = false;
-  bool buttonPressed = false;
   bool temperatureValid = false;
+  float humidity = NAN;
   bool humidityValid = false;
-  bool isWifiConnected = false;
-  bool isBluetoothConnected = false;
-  bool isAlarmSet = false;
+  int ambientLightPercent = 0;
+  bool motionDetected = false;
+
+  int32_t rotaryPositionSinceLastUpdate = 0;
+  int32_t rotaryPositionSinceLastReset = 0;
+  bool buttonPressed = false;
+
+  bool isLightOn = false;
   bool isSoundOn = true;
-  bool isTimeSynced = false;
-};
+};   
