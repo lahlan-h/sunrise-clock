@@ -1,7 +1,6 @@
 #include <Arduino.h>
 
 #include "DeviceState.h"
-#include "ScreenState.h"
 #include "Peripheral.h"
 #include "secrets.h"
 #include "pins.h"
@@ -20,11 +19,9 @@
 
 #include "CommandRouter.h"
 
-static const uint8_t BLUETOOTH_CONNECTED_EFFECT = 6; 
-static const uint8_t MAIN_MENU_ITEM_COUNT = 5;
+static const uint8_t BLUETOOTH_CONNECTED_EFFECT = 6;
 
 DeviceState deviceState;
-ScreenState screenState;
 
 // Initalise Peripherals
 RotaryEncoder rotary(ROTARY_ENCODER_CLK, ROTARY_ENCODER_DT);
@@ -98,8 +95,6 @@ void loop(){
   for(Peripheral* p: peripherals) p->update();
   for(Peripheral* connection : connections) connection->update();
 
-  Serial.println(ldr.getLightLevel());
-
   // Apply commands queued by BLE / MQTT, then refresh the shared state
   bool commandApplied = commandRouter.update();
   bool wasBluetoothConnected = deviceState.isBluetoothConnected;
@@ -116,39 +111,17 @@ void loop(){
 
   switch(deviceState.screen){
     case Screen::Home:
-      if(rotaryButton.wasPressed()) deviceState.screen = Screen::Main_Menu;
-      if(alarmButton.wasPressed()) deviceState.isAlarmSet = !deviceState.isAlarmSet;
-      oled.drawHomeScreen(deviceState);
+      oled.drawHome(deviceState);
       break;
     case Screen::Main_Menu:
-      // Stretch goal: after 15s return back to Home screen  
-      if(backButton.wasPressed()) deviceState.screen = Screen::Home;
-      screenState.selectedMainMenuItemIndex = ((screenState.selectedMainMenuItemIndex + rotary.getClicksSinceLastUpdate()) % MAIN_MENU_ITEM_COUNT + MAIN_MENU_ITEM_COUNT) % MAIN_MENU_ITEM_COUNT;
-      
-      if(screenState.selectedMainMenuItemIndex == 0 && rotaryButton.wasPressed()) deviceState.screen = Screen::Alarm_Setter;
-      if(screenState.selectedMainMenuItemIndex == 1 && rotaryButton.wasPressed()) deviceState.screen = Screen::Song_Picker;
-      if(screenState.selectedMainMenuItemIndex == 2 && rotaryButton.wasPressed()) deviceState.screen = Screen::Brightness_Setter;
-      if(screenState.selectedMainMenuItemIndex == 3 && rotaryButton.wasPressed()) deviceState.screen = Screen::Volume_Setter;
-      if(screenState.selectedMainMenuItemIndex == 4 && rotaryButton.wasPressed()) deviceState.screen = Screen::Info;
-
-      oled.drawMainMenuScreen(deviceState, screenState);
       break;
     case Screen::Alarm_Setter:
       break;
     case Screen::Song_Picker:
       break;
-    case Screen::Brightness_Setter:
-      break;
-    case Screen::Volume_Setter:
-      break;
-    case Screen::Info:
-      if(backButton.wasPressed()) deviceState.screen = Screen::Home;
-      oled.drawInfoScreen(deviceState);
-      break;
-    case Screen::Alarm:
+    case Screen::Settings:
       break;
     case Screen::Off:
-    oled.drawOffScreen();  
-    break;
+      break;
   }
 }

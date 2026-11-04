@@ -1,16 +1,12 @@
 #pragma once
 
 #include <Arduino.h>
-#include <ESP32Encoder.h>
 #include <Peripheral.h>
 
 // - - - - - - Warning - - - - - - 
-// Written for a KY-040 module. Power
+// Written for a  KY-040 module. Power
 // it from 3.3V, as it's pull-ups put
-// the + pin voltage onto CLK and DT.
-// The ESP32's hardware pulse counter
-// does the counting, so clicks aren't
-// missed when the loop is slow
+// the + pin voltage onto CLK and DT 
 // - - - - - - - - - - - - - - - -
 
 // - - - - - - - Usage - - - - - - -
@@ -41,8 +37,16 @@ class RotaryEncoder : public Peripheral {
     
   private:
     uint8_t clkPin, dtPin;
-    ESP32Encoder pulseCounter;
+
+    // Only the interrupt touches these after begin
+    uint8_t previousPinState = 0;
+    int32_t pendingTransitions = 0;
+
+    // Shared with the interrupt, so it's volatile
+    volatile int32_t unreadClicks = 0;
 
     int32_t clicksSinceReset = 0;
     int32_t clicksSinceLastUpdate = 0;
+
+    uint8_t readPinState();
 };
