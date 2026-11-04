@@ -48,6 +48,15 @@ void Mp3Player::playSong(uint8_t track) {
   player.playFolder(songsFolder, track);
 }
 
+void Mp3Player::loopSong(uint8_t track) {
+  if (track == 0 || track > songCount) {
+    return;
+  }
+
+  player.playFolder(songsFolder, track);
+  player.enableLoop(); // Repeats the current track
+}
+
 void Mp3Player::playEffect(uint8_t effect) {
   if (effect == 0 || effect > effectCount) {
     return;
@@ -58,6 +67,11 @@ void Mp3Player::playEffect(uint8_t effect) {
 
 void Mp3Player::pause() {
   player.pause();
+}
+
+void Mp3Player::stop() {
+  player.disableLoop();
+  player.stop();
 }
 
 void Mp3Player::setVolume(uint8_t volume) {
