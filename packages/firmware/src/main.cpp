@@ -1,7 +1,6 @@
 #include <Arduino.h>
 
 #include "DeviceState.h"
-#include "Connections.h"
 #include "Peripheral.h"
 #include "secrets.h"
 #include "pins.h"
@@ -13,16 +12,14 @@
 #include "sensor/MotionSensor.h"
 #include "sensor/DHTSensor.h"
 #include "light/LightArray.h"
-#include "screen/OledScreen.h"
+#include "screen/oledScreen.h"
 #include "connectivity/BLEConnection.h"
 #include "connectivity/WiFiConnection.h"
 #include "connectivity/MQTTConnection.h"
-#include "connectivity/TelemetryPublisher.h"
-#include "audio/Mp3Player.h"
 
 #include "CommandRouter.h"
 
-static const char* FIRMWARE_VERSION = "0.0.0";
+static const uint8_t BLUETOOTH_CONNECTED_EFFECT = 6;
 
 DeviceState deviceState;
 
@@ -36,17 +33,16 @@ LightArray lights(LED_STRIP_DIN);
 OledScreen oled(OLED_SDA_PIN, OLED_SCL_PIN);
 Mp3Player mp3(MP3_RX_PIN, MP3_TX_PIN);
 
+// Commands from BLE and MQTT all go through here
+CommandRouter commandRouter(deviceState, lights);
+
 // Initalise Connections
 WiFiConnection wifi(WIFI_SSID, WIFI_PASSWORD);
-BLEConnection ble(BLE_ADVERTISER_NAME, deviceState, mp3);
-MQTTConnection mqtt(wifi, MQTT_HOST, MQTT_PORT, MQTT_USERNAME, MQTT_PASSWORD, MQTT_DEVICE_ID, MQTT_USE_TLS, MQTT_ROOT_CERTIFICATE);
-
-// Initalise Cloud Chain
-TelemetryPublisher telemetry(mqtt, deviceState, MQTT_DEVICE_ID, nullptr, MQTTConnection::DEFAULT_TELEMETRY_INTERVAL_MS);
-CommandRouter commandRouter(deviceState, ble, mqtt, lights);
+BLEConnection ble(BLE_ADVERTISER_NAME, deviceState, commandRouter);
+MQTTConnection mqtt(wifi, deviceState, commandRouter, MQTT_HOST, MQTT_PORT, MQTT_USERNAME, MQTT_PASSWORD, MQTT_DEVICE_ID);
 
 Peripheral* peripherals[] = {&rotary, &buttonA, &ldr, &pir, &dht, &lights, &oled, &mp3} ;
-Connections* connections[] = {&wifi, &ble, &mqtt};
+Peripheral* connections[] = {&wifi, &ble, &mqtt};
 
 void setup(){
   Serial.begin(115200);
@@ -54,10 +50,9 @@ void setup(){
   // Initialise Peripherals
   for(Peripheral* p : peripherals) p->begin();
 
-  // Initialise Connections
-  for(Connections* connection : connections) connection->begin();
-
-  telemetry.begin();
+  // Initialise Connections (the router must be ready before BLE/MQTT deliver commands)
+  commandRouter.begin();
+  for(Peripheral* connection : connections) connection->begin();
 
   // Populate DeviceState struct with as much informaton as we know right now
   deviceState.ssid = WIFI_SSID;
@@ -70,6 +65,7 @@ void updateDeviceState(){
   // Connections
   deviceState.isWifiConnected = wifi.isConnected();
   deviceState.wifiRssi = wifi.isConnected() ? wifi.getRSSI() : 0;
+  deviceState.isTimeSynced = wifi.getTime(deviceState.currentTime);
   deviceState.isBluetoothConnected = ble.isConnected();
 
   // Peripherals
@@ -82,18 +78,32 @@ void updateDeviceState(){
   deviceState.rotaryPositionSinceLastUpdate = rotary.getClicksSinceLastUpdate();
   deviceState.rotaryPositionSinceLastReset = rotary.getClicksSinceReset();
   deviceState.buttonPressed = buttonA.getIsPushed(); // Revise button implementation
-  deviceState.isLightOn = lights.isOn(); // Maybe redo lights variable name 
+  deviceState.isLightOn = lights.isOn(); // Maybe redo lights variable name
+  deviceState.lightBrightnessPercent = lights.getBrightnessPercent();
+  deviceState.lightMode = lights.getMode();
+
+  deviceState.upTimeMs = millis();
 }
 
 void loop(){
   // Update Peripherals and Connections
   for(Peripheral* p: peripherals) p->update();
-  for(Connections* connection : connections) connection->update();
-  
-  commandRouter.update();
-  telemetry.update();
-  
+  for(Peripheral* connection : connections) connection->update();
+
+  // Apply commands queued by BLE / MQTT, then refresh the shared state
+  bool commandApplied = commandRouter.update();
+  bool wasBluetoothConnected = deviceState.isBluetoothConnected;
   updateDeviceState();
+
+  if (deviceState.isBluetoothConnected && !wasBluetoothConnected) {
+    mp3.playEffect(BLUETOOTH_CONNECTED_EFFECT);
+  }
+
+  // Push changes out now rather than waiting for the next scheduled refresh
+  if (commandApplied) {
+    ble.notifyState();
+    mqtt.publishState();
+  }
 
   switch(deviceState.screen){
     case Screen::Home:

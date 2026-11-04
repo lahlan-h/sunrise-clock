@@ -12,6 +12,12 @@ enum class Screen {
   Off             // 5
 };
 
+enum class LightMode : uint8_t {
+  Off,
+  Steady,
+  Sunrise
+};
+
 struct DeviceState {
   Screen screen = Screen::Home;
   const char* firmwareVersion = "1.0.0";
@@ -44,5 +50,29 @@ struct DeviceState {
   bool buttonPressed = false;
 
   bool isLightOn = false;
+  uint8_t lightBrightnessPercent = 0;
+  LightMode lightMode = LightMode::Off;
   bool isSoundOn = true;
-};   
+};
+
+// Names used for these enums in BLE / MQTT JSON
+inline const char* lightModeName(LightMode mode) {
+  switch (mode) {
+    case LightMode::Off:     return "OFF";
+    case LightMode::Steady:  return "STEADY";
+    case LightMode::Sunrise: return "SUNRISE";
+  }
+  return "OFF";
+}
+
+inline const char* screenName(Screen screen) {
+  switch (screen) {
+    case Screen::Home:         return "HOME";
+    case Screen::Main_Menu:    return "MAIN_MENU";
+    case Screen::Alarm_Setter: return "ALARM_SETTER";
+    case Screen::Song_Picker:  return "SONG_PICKER";
+    case Screen::Settings:     return "SETTINGS";
+    case Screen::Off:          return "OFF";
+  }
+  return "UNKNOWN";
+}
