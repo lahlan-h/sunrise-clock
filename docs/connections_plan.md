@@ -242,37 +242,39 @@ reach Grafana between intervals, call `mqtt.publishState()` from `loop()` when
 motion starts.
 
 Readings are rounded to one decimal place. Invalid DHT readings are `null`
-and have explicit validity fields; other values have none. Payload:
+and have explicit validity fields; other values have none. Keys match the
+`DeviceState` member names, except `protocolVersion` and `deviceId`, which
+come from `CommandRouter` and `MQTTConnection`. Payload:
 
 ```json
 {
-  "protocol_version": 1,
-  "device_id": "sunrise-clock-01",
-  "firmware_version": "1.0.0",
-  "temperature_c": 24.5,
-  "temperature_valid": true,
-  "humidity_percent": 48.2,
-  "humidity_valid": true,
-  "ambient_light_percent": 63,
-  "motion": false,
-  "rotary_button_pressed": false,
-  "back_button_pressed": false,
-  "alarm_button_pressed": false,
-  "rotary_position": 12,
-  "alarm_enabled": true,
-  "alarm_hour": 6,
-  "alarm_minute": 30,
-  "light_on": true,
-  "light_brightness_percent": 72,
-  "light_mode": "STEADY",
-  "sound_on": true,
+  "protocolVersion": 1,
+  "deviceId": "sunrise-clock-01",
+  "firmwareVersion": "1.0.0",
+  "temperature": 24.5,
+  "temperatureValid": true,
+  "humidity": 48.2,
+  "humidityValid": true,
+  "ambientLightPercent": 63,
+  "motionDetected": false,
+  "rotaryButtonPressed": false,
+  "backButtonPressed": false,
+  "alarmButtonPressed": false,
+  "rotaryPositionSinceLastReset": 12,
+  "isAlarmSet": true,
+  "alarmHour": 6,
+  "alarmMinute": 30,
+  "isLightOn": true,
+  "lightBrightnessPercent": 72,
+  "lightMode": "STEADY",
+  "isSoundOn": true,
   "volume": 20,
   "screen": "HOME",
-  "wifi_connected": true,
-  "wifi_rssi": -58,
-  "ble_connected": false,
-  "time_synced": true,
-  "uptime_ms": 123456
+  "isWifiConnected": true,
+  "wifiRssi": -58,
+  "isBluetoothConnected": false,
+  "isTimeSynced": true,
+  "upTimeMs": 123456
 }
 ```
 
@@ -451,9 +453,13 @@ published on connect, after each applied command, and every 120 seconds.
 - [x] Verify that credentials are not committed.
 - [x] Choose and verify whether the broker uses TLS for the target deployment.
 
-The current target is plain MQTT on the trusted local lab network, so TLS was
-removed. Adding it later means swapping `WiFiClient` for `WiFiClientSecure`
-and calling `setCACert()`. The telemetry interval is `TELEMETRY_INTERVAL_MS`
+The firmware uses plain MQTT (no TLS) against the public broker
+`broker.emqx.io:1883`, with no username or password. Anyone can read and
+publish on a public broker, so `MQTT_DEVICE_ID` must be unique and hard to
+guess: it is both the topic namespace and the MQTT client ID, and a duplicate
+client ID makes the broker disconnect one of the two clients. TLS-only brokers
+such as EMQX Cloud Serverless (port 8883) will not work without bringing back
+`WiFiClientSecure`. The telemetry interval is `TELEMETRY_INTERVAL_MS`
 in `MQTTConnection.cpp`, not the secrets file.
 `secrets.h` is intentionally local-only and is excluded by `.gitignore`, as
 confirmed during implementation. A repository-history audit is still prudent

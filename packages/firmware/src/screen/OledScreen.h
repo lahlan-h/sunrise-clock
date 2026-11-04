@@ -12,9 +12,9 @@ class OledScreen : public Peripheral {
 
     void begin() override;
 
-    void drawHome(const DeviceState& state);
-    void drawWakeUp();
-    void drawSettings();
+    void drawHomeScreen(const DeviceState& deviceState);
+    void drawMainMenuScreen(const DeviceState& state);
+
     void drawSongList(const char* const songNames[], uint8_t songCount, uint8_t selectedSong, uint8_t firstVisibleSong);
 
     /* 
