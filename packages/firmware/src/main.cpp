@@ -28,7 +28,7 @@ ScreenState screenState;
 
 // Initalise Peripherals
 RotaryEncoder rotary(ROTARY_ENCODER_CLK, ROTARY_ENCODER_DT);
-PushButton rotaryButton(BTN_ROTARY_PIN);
+RotaryButton rotaryButton(BTN_ROTARY_PIN);
 PushButton backButton(BTN_BACK_PIN);
 PushButton alarmButton(BTN_ALARM_PIN);
 PhotoResistor ldr(LDR_PIN);

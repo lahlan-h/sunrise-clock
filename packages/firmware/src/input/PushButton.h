@@ -2,6 +2,9 @@
 
 #include <Arduino.h>
 #include <Peripheral.h>
+#include "audio/Mp3Player.h"
+
+extern Mp3Player mp3;
 
 // - - - - - - Warning - - - - - -
 // Uses INPUT_PULLUP, so wire buttons
@@ -44,4 +47,16 @@ class PushButton : public Peripheral {
 
     bool isPushed = false;
     bool pressedThisUpdate = false;
+};
+
+class RotaryButton : public PushButton {
+  public:
+    using PushButton::PushButton;
+
+    void update() override {
+      PushButton::update();
+      if (wasPressed()) {
+        mp3.playEffect(4);
+      }
+    }
 };
