@@ -13,42 +13,59 @@ void OledScreen::begin() {
   u8g2.begin();
 }
 
-void OledScreen::drawHome(const DeviceState& state) {
+void OledScreen::drawHomeScreen(const DeviceState& deviceState) {
   char timeText[6] = "--:--";
   char periodText[3] = "";
-  if (state.isTimeSynced) {
-    strftime(timeText, sizeof(timeText), "%I:%M", &state.currentTime);
-    strftime(periodText, sizeof(periodText), "%p", &state.currentTime);
+  if (deviceState.isTimeSynced) {
+    strftime(timeText, sizeof(timeText), "%I:%M", &deviceState.currentTime);
+    strftime(periodText, sizeof(periodText), "%p", &deviceState.currentTime);
   }
 
   char temperatureText[8] = "--°C";
   char humidityText[6] = "--%";
   
-  if (!isnan(state.temperature)) {
-    snprintf(temperatureText, sizeof(temperatureText), "%.0f°C", state.temperature);
+  if (!isnan(deviceState.temperature)) {
+    snprintf(temperatureText, sizeof(temperatureText), "%.0f°C", deviceState.temperature);
   }
   
-  if (!isnan(state.humidity)) {
-    snprintf(humidityText, sizeof(humidityText), "%.0f%%", state.humidity);
+  if (!isnan(deviceState.humidity)) {
+    snprintf(humidityText, sizeof(humidityText), "%.0f%%", deviceState.humidity);
   }
 
   u8g2.clearBuffer();
   u8g2.setFontMode(1);
   u8g2.setBitmapMode(1);
   u8g2.setDrawColor(1);
-  u8g2.drawXBMP(9, 39, 19, 16, state.isWifiConnected ? image_wifi_full_bits : image_wifi_not_connected_bits);
+  u8g2.drawXBMP(9, 39, 19, 16, deviceState.isWifiConnected ? image_wifi_full_bits : image_wifi_not_connected_bits);
   u8g2.setFont(u8g2_font_timR18_tr);
   u8g2.drawStr(8, 25, timeText);
   u8g2.drawFrame(3, 4, 76, 26);
   u8g2.setFont(u8g2_font_4x6_tr);
   u8g2.drawStr(67, 20, periodText);
   u8g2.drawFrame(83, 4, 44, 26);
-  u8g2.drawXBMP(41, 39, 14, 16, state.isBluetoothConnected ? image_bluetooth_bits : image_bluetooth_not_connected_bits);
-  u8g2.drawXBMP(68, 39, 20, 16, state.isSoundOn ? image_volume_loud_bits : image_volume_muted_bits);
-  if (state.isAlarmSet) u8g2.drawXBMP(105, 39, 15, 16, image_clock_alarm_bits);
+  u8g2.drawXBMP(41, 39, 14, 16, deviceState.isBluetoothConnected ? image_bluetooth_bits : image_bluetooth_not_connected_bits);
+  u8g2.drawXBMP(68, 39, 20, 16, deviceState.isSoundOn ? image_volume_loud_bits : image_volume_muted_bits);
+  if (deviceState.isAlarmSet) u8g2.drawXBMP(105, 39, 15, 16, image_clock_alarm_bits);
   u8g2.setFont(u8g2_font_6x10_tf);
   u8g2.drawStr(96, 26, humidityText);
   u8g2.drawUTF8(94, 15, temperatureText);
+  u8g2.sendBuffer();
+}
+
+void OledScreen::drawMainMenuScreen(const DeviceState& DeviceState){
+  u8g2.clearBuffer();
+  u8g2.setFontMode(1);
+  u8g2.setBitmapMode(1);
+  u8g2.setDrawColor(1);
+  u8g2.setFont(u8g2_font_4x6_tr);
+  u8g2.drawStr(14, 30, "");
+  u8g2.drawEllipse(20, 15, 5, 5);
+  u8g2.setFont(u8g2_font_timR12_tr);
+  u8g2.drawStr(34, 20, "Set Alarm");
+  u8g2.drawEllipse(20, 31, 5, 5);
+  u8g2.drawStr(34, 37, "Choose Song");
+  u8g2.drawEllipse(20, 49, 5, 5);
+  u8g2.drawStr(34, 55, "Settings");
   u8g2.sendBuffer();
 }
 
