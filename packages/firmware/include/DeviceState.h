@@ -4,13 +4,15 @@
 #include <time.h>
 
 enum class Screen { 
-  Home,           // 0
-  Main_Menu,      // 1
-  Alarm_Setter,   // 2
-  Song_Picker,    // 3
-  Alarm,          // 4
-  Settings,       // 5
-  Off             // 6
+  Home,               
+  Main_Menu,        
+  Alarm_Setter,     
+  Song_Picker,       
+  Brightness_Setter,  
+  Volume_Setter,      
+  Info,          
+  Alarm,          
+  Off             
 };
 
 enum class LightMode : uint8_t {
@@ -75,7 +77,6 @@ inline const char* screenName(Screen screen) {
     case Screen::Main_Menu:    return "MAIN_MENU";
     case Screen::Alarm_Setter: return "ALARM_SETTER";
     case Screen::Song_Picker:  return "SONG_PICKER";
-    case Screen::Settings:     return "SETTINGS";
     case Screen::Off:          return "OFF";
   }
   return "UNKNOWN";
