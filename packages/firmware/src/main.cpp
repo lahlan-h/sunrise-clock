@@ -1,6 +1,7 @@
 #include <Arduino.h>
 
 #include "DeviceState.h"
+#include "ScreenState.h"
 #include "Peripheral.h"
 #include "secrets.h"
 #include "pins.h"
@@ -19,9 +20,11 @@
 
 #include "CommandRouter.h"
 
-static const uint8_t BLUETOOTH_CONNECTED_EFFECT = 6;
+static const uint8_t BLUETOOTH_CONNECTED_EFFECT = 6; 
+static const uint8_t MAIN_MENU_ITEM_COUNT = 3;
 
 DeviceState deviceState;
+ScreenState screenState;
 
 // Initalise Peripherals
 RotaryEncoder rotary(ROTARY_ENCODER_CLK, ROTARY_ENCODER_DT);
@@ -111,9 +114,14 @@ void loop(){
 
   switch(deviceState.screen){
     case Screen::Home:
-      oled.drawHome(deviceState);
+      if(rotaryButton.wasPressed()) deviceState.screen = Screen::Main_Menu;
+      if(alarmButton.wasPressed()) deviceState.isAlarmSet = !deviceState.isAlarmSet;
+      oled.drawHomeScreen(deviceState);
       break;
     case Screen::Main_Menu:
+      if(backButton.wasPressed()) deviceState.screen = Screen::Home;
+      screenState.selectedMainMenuItemIndex += rotary.getClicksSinceLastUpdate();
+      oled.drawMainMenuScreen(deviceState);
       break;
     case Screen::Alarm_Setter:
       break;

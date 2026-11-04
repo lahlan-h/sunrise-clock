@@ -8,8 +8,9 @@ enum class Screen {
   Main_Menu,      // 1
   Alarm_Setter,   // 2
   Song_Picker,    // 3
-  Settings,       // 4
-  Off             // 5
+  Alarm,          // 4
+  Settings,       // 5
+  Off             // 6
 };
 
 enum class LightMode : uint8_t {
