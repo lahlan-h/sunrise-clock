@@ -1,5 +1,12 @@
 #include "LightArray.h"
 
+// Dim, so the meter reads as a display rather than a lamp
+static const uint8_t levelMeterBrightness = 64; // 25% of 255
+
+// Hues on Adafruit's 0-65535 colour wheel
+static const uint16_t greenHue = 21845;
+static const uint16_t redHue = 0;
+
 LightArray::LightArray(uint8_t pin, uint16_t count)
 : strip(count, pin, NEO_GRB + NEO_KHZ800) {}
 
@@ -50,6 +57,21 @@ void LightArray::startSunrise(unsigned long ms){
   on = true; // Report on straight away, not only after the first update()
 }
 
+void LightArray::showLevelMeter(uint8_t level, uint8_t maxLevel){
+  if (level > maxLevel) level = maxLevel;
+
+  running = false;
+  on = level > 0;
+  strip.setBrightness(levelMeterBrightness);
+
+  // Round up, so any level above 0 lights at least the first LED
+  uint16_t litLedCount = (static_cast<uint32_t>(level) * strip.numPixels() + maxLevel - 1) / maxLevel;
+  for (uint16_t led = 0; led < strip.numPixels(); ++led) {
+    strip.setPixelColor(led, led < litLedCount ? levelMeterColour(led) : 0);
+  }
+  strip.show();
+}
+
 void LightArray::off(){
   running = false;
   on = false;
@@ -84,4 +106,12 @@ uint32_t LightArray::sunriseColour(float progress) {
   }
   float t = (progress - 0.5) / 0.5;
   return strip.Color(255, lerp(100, 200, t), lerp(0, 120, t));
+}
+
+uint32_t LightArray::levelMeterColour(uint16_t led) {
+  if (strip.numPixels() < 2) return strip.Color(0, 255, 0);
+
+  float progress = led / float(strip.numPixels() - 1);
+  uint16_t hue = greenHue - (greenHue - redHue) * progress;
+  return strip.gamma32(strip.ColorHSV(hue));
 }

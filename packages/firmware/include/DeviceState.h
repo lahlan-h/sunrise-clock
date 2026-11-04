@@ -33,6 +33,7 @@ struct DeviceState {
   bool isAlarmSet = false;
   uint8_t alarmHour = 0;
   uint8_t alarmMinute = 0;
+  uint8_t alarmSongIndex = 0;
 
   const char* ssid = "";
   int16_t wifiRssi = 0;

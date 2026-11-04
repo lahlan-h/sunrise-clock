@@ -36,6 +36,7 @@ class LightArray : public Peripheral{
 
     void startSunrise(unsigned long durationMs);
     void applyControl(uint8_t brightnessPercent, LightMode mode);
+    void showLevelMeter(uint8_t level, uint8_t maxLevel); // Lights LEDs left to right, green to red
     void off();
     bool isRunning();
     bool isOn() const;
@@ -51,4 +52,5 @@ class LightArray : public Peripheral{
     uint8_t brightnessPercent = 100;
 
     uint32_t sunriseColour(float progress);
+    uint32_t levelMeterColour(uint16_t led);
 };
