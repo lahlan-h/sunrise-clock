@@ -305,6 +305,11 @@ void BLEConnection::sendAcknowledgement(
   characteristic->notify();
 }
 
+void BLEConnection::acknowledgeCommand(
+    const char* commandId, bool accepted, const char* message) {
+  sendAcknowledgement(commandId, accepted, message);
+}
+
 void BLEConnection::refreshReadCharacteristics() {
   if (!started) return;
   String status = String("{\"protocol_version\":1,\"ble_connected\":") +

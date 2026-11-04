@@ -19,6 +19,7 @@
 #include "connectivity/MQTTConnection.h"
 #include "connectivity/TelemetryPublisher.h"
 #include "audio/Mp3Player.h"
+#include "CommandRouter.h"
 
 DeviceState deviceState;
 RotaryEncoder rotary(ROTARY_ENCODER_CLK, ROTARY_ENCODER_DT);
@@ -49,6 +50,7 @@ TelemetryPublisher telemetry(
     MQTTConnection::DEFAULT_TELEMETRY_INTERVAL_MS);
 DeviceStateUpdater stateUpdater(
     deviceState, wifi, ble, dht, ldr, pir, buttonA, rotary, lights);
+CommandRouter commandRouter(deviceState, ble, lights);
 
 Peripheral* peripherals[] = {&rotary, &buttonA, &ldr, &pir, &dht, &lights, &oled } ;
 Connections* connections[] = {&wifi, &ble, &mqtt};
@@ -75,6 +77,7 @@ void loop(){
   // Update Peripherals
   for(Peripheral* p: peripherals) p->update();
   for(Connections* connection : connections) connection->update();
+  commandRouter.update();
   stateUpdater.update();
   telemetry.update();
   

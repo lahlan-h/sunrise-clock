@@ -290,26 +290,62 @@ The first payload should cover all meaningful project data, for example:
 
 ### 7. `CommandRouter`
 
-Status: `[ ]` Not implemented. BLE and MQTT currently have separate parsers
-and queues; neither queue is routed through a shared application boundary.
+Status: `Partial`. BLE commands are routed through a shared application
+boundary. MQTT commands still need to be routed through the same boundary.
 
-Create one application-facing command boundary for both local BLE writes and
-MQTT commands.
+`CommandRouter` is the application-level command boundary. It is separate
+from the `Connections` interface:
 
-Proposed responsibilities:
+| Component | Responsibility |
+|---|---|
+| `Connections` | Shared `begin()` and non-blocking `update()` lifecycle for communication transports |
+| `CommandRouter` | Decide what an accepted command means to the clock and apply it to application state or control services |
 
-- parse and validate an input command;
-- enforce ranges such as hour `0..23`, minute `0..59`, and brightness
-  `0..100`;
-- distinguish configuration from immediate control;
-- update `DeviceState` only after validation;
-- apply changes through the relevant local control logic;
-- return an acknowledgement or error to the originating transport;
-- reject commands that are stale, malformed, unsupported, or unsafe.
+`Connections` remains small and transport-agnostic. It is used by
+`WiFiConnection`, `BLEConnection`, and `MQTTConnection` so `main.cpp` can
+start and maintain each service uniformly. It must not know about alarms,
+lights, audio, sensors, or command semantics.
 
-This prevents BLE and MQTT from implementing different alarm or light rules.
-The physical controls should use the same application-level setters where
-practical.
+`CommandRouter` consumes commands queued by communication transports and
+should eventually consume commands from BLE, MQTT, and physical controls
+through the same application rules. It should not parse BLE characteristics,
+manage MQTT topics, or access hardware drivers directly.
+
+Current Phase 4 responsibilities:
+
+- consume queued BLE commands;
+- apply validated alarm configuration to `DeviceState`;
+- apply supported light commands through `LightArray`;
+- notify the BLE client when application state changes;
+- return an explicit rejection for unsupported light modes.
+
+Planned responsibilities:
+
+- consume queued MQTT commands through the same path as BLE commands;
+- identify command origin (`BLE`, `MQTT`, or physical control) so the correct
+  acknowledgement mechanism can be used;
+- enforce application-level rules after transport parsing, including alarm
+  hour `0..23`, minute `0..59`, brightness `0..100`, and supported modes;
+- distinguish configuration commands from immediate control commands;
+- update `DeviceState` only after all validation succeeds;
+- apply alarm changes through an alarm controller once the local alarm state
+  machine is implemented;
+- apply light changes through `LightArray`, without accessing NeoPixel
+  implementation details;
+- route audio settings or playback requests through `Mp3Player` or a future
+  audio controller;
+- reject duplicate, stale, malformed, unsupported, or unsafe commands;
+- return consistent `queued`, `applied`, `rejected`, or `failed` results to
+  the originating transport.
+
+The router is an application coordinator rather than a hardware driver.
+BLE-specific behavior stays in `BLEConnection`, MQTT-specific behavior stays
+in `MQTTConnection`, LED rendering stays in `LightArray`, and DFPlayer serial
+communication stays in `Mp3Player`.
+
+The current command structure is named `BLECommand` because BLE was
+implemented first. Once MQTT and physical controls use the same queue
+contract, rename it to a transport-neutral type such as `DeviceCommand`.
 
 ### 8. `Connections` interface
 
@@ -320,24 +356,27 @@ connection classes. `main.cpp` currently stores connection implementations in
 the `Connections* connections[]` collection and calls them through this
 interface.
 
-No separate `ConnectionManager` class is required. If coordination becomes
-necessary, it should be implemented through the existing `Connections`
-abstraction or directly in `main.cpp` without hiding peripheral timing or
-preventing local control updates when a connection is unavailable.
+`Connections` is not responsible for routing application commands. That
+responsibility belongs to `CommandRouter`. No separate `ConnectionManager`
+class is required. If transport coordination becomes necessary, it should be
+implemented through the existing `Connections` abstraction or directly in
+`main.cpp` without hiding peripheral timing or preventing local control
+updates when a connection is unavailable.
 
 ## Communication contracts
 
 ### Local BLE path
 
 Status: `Partial`. The phone can read alarm/status/device information and
-receive queued-command acknowledgements, but important sensor readings and
-application-side command effects are not available yet.
+receive queued-command acknowledgements. BLE alarm and light commands now pass
+through `CommandRouter`; MQTT and physical-control routing still need to use
+the same boundary.
 
 ```text
 Phone
   -> alarm_config write -> BLEConnection
-  -> validated command -> CommandRouter
-  -> DeviceState / local alarm control
+  -> validated command queue -> CommandRouter
+  -> DeviceState / local alarm and light control
   -> acknowledgement + status notification -> phone
 ```
 
@@ -350,7 +389,8 @@ method; serial output may remain as a development diagnostic interface.
 
 Status: `Partial`. The MQTT wrapper uses the planned topic namespace and is
 wired into the firmware lifecycle. `TelemetryPublisher` now publishes the
-state snapshot, but end-to-end command handling is not connected.
+state snapshot, but MQTT commands still need to be consumed by
+`CommandRouter`.
 
 ```text
 DeviceState
@@ -443,8 +483,8 @@ before publishing the repository.
 - [x] Add read accessors or snapshots to all required peripheral classes.
 - [x] Expand `BLEConnection` and add the initial `WiFiConnection` interface.
 - [x] Add the `MQTTConnection` header.
-- [x] Add the `TelemetryPublisher` header and implementation. `CommandRouter`
-  remains pending.
+- [x] Add the `TelemetryPublisher` header and implementation.
+- [x] Add the initial `CommandRouter` for BLE alarm and light commands.
 - [x] Add `DeviceStateUpdater` to keep peripheral synchronization out of
   `main.cpp`.
 - [x] Define the connection lifecycle abstraction in `include/Connections.h`.
@@ -457,10 +497,40 @@ state rather than reading peripheral drivers directly.
 ### Phase 4: Integrate local communication
 
 - [x] Initialize BLE during firmware setup.
-- [ ] Expose status, telemetry, alarm configuration, and light control
+- [x] Expose status, telemetry, alarm configuration, and light control
   completely.
-- [ ] Route phone writes through `CommandRouter`.
+- [x] Route phone writes through `CommandRouter`.
 - [ ] Test read, write, notify, invalid input, reconnect, and restart behavior.
+
+Phase 4 verification cases:
+
+1. Read `status`, `alarm_config`, and `device_info` after connecting.
+2. Write a valid alarm command and verify the acknowledgement, updated
+   `alarm_config`, and status notification.
+3. Write valid `OFF`, `STEADY`, and `SUNRISE` light commands at brightness
+   values `0`, `50`, and `100`; verify the LED output and notification.
+4. Write malformed JSON, unsupported protocol versions, invalid alarm ranges,
+   invalid brightness, and unsupported light modes; verify rejection.
+5. Disconnect and reconnect the phone; verify advertising resumes and reads
+   return current runtime state.
+6. Restart the ESP32 and verify configuration returns to defaults because
+   Phase 4 intentionally does not persist settings.
+
+LightBlue test payloads:
+
+```json
+{"protocol_version":1,"command_id":"alarm-001","enabled":true,"hour":6,"minute":30}
+{"protocol_version":1,"command_id":"light-001","brightness_percent":50,"mode":"STEADY"}
+{"protocol_version":1,"command_id":"light-002","brightness_percent":100,"mode":"SUNRISE"}
+{"protocol_version":1,"command_id":"light-003","brightness_percent":0,"mode":"OFF"}
+```
+
+Write the alarm payload to `alarm_config` and light payloads to
+`light_control`. Subscribe to `command acknowledgement`, `status`,
+`alarm_config`, and `light_control` notifications before writing. Each valid
+write should first acknowledge `accepted: true` with `message: "queued"`,
+then produce the corresponding state notification after the main loop applies
+the command.
 
 ### Phase 5: Integrate global communication
 
@@ -484,15 +554,16 @@ state rather than reading peripheral drivers directly.
 ## Main-loop integration order
 
 Status: `Partial`. Peripheral updates, connection maintenance, state
-synchronization, and telemetry publishing are now processed in the main loop.
-Command queues and local application control still need to be added.
+synchronization, telemetry publishing, and BLE command routing are now
+processed in the main loop. MQTT command routing and the local alarm state
+machine still need to be added.
 
 The eventual loop should remain non-blocking and follow this order:
 
 1. [x] Update/read peripherals on their own schedules.
 2. [ ] Update local state and apply local alarm/light control.
-3. [ ] Process queued BLE commands.
-4. [ ] Process queued MQTT commands.
+3. [x] Process queued BLE commands.
+4. [ ] Process queued MQTT commands through `CommandRouter`.
 5. [x] Run BLE and MQTT client maintenance.
 6. [x] Synchronize peripheral values through `DeviceStateUpdater`.
 7. [x] Publish scheduled or changed telemetry through `TelemetryPublisher`.

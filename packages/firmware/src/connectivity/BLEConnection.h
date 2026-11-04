@@ -45,6 +45,7 @@ class BLEConnection : public Connections {
     void notifyState();
     void notifyAlarmConfig();
     void notifyLightControl();
+    void acknowledgeCommand(const char* commandId, bool accepted, const char* message);
 
   private:
     class ServerCallbacks;
