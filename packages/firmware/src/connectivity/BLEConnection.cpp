@@ -16,6 +16,7 @@ constexpr char BLEConnection::ACK_UUID[];
 
 namespace {
 const size_t MAX_COMMAND_LENGTH = 192;
+const uint8_t BLUETOOTH_CONNECTED_EFFECT = 6;
 
 bool readJsonString(const String& payload, const char* key, char* output, size_t outputSize) {
   String marker = String("\"") + key + "\":\"";
@@ -74,6 +75,7 @@ class BLEConnection::ServerCallbacks : public BLEServerCallbacks {
     void onConnect(BLEServer*) override {
       connection.clientConnected = true;
       connection.state.isBluetoothConnected = true;
+      connection.mp3.playEffect(BLUETOOTH_CONNECTED_EFFECT);
       connection.notifyState();
     }
 
@@ -115,9 +117,10 @@ class BLEConnection::CharacteristicCallbacks : public BLECharacteristicCallbacks
     BLEConnection& connection;
 };
 
-BLEConnection::BLEConnection(const char* deviceName, DeviceState& state)
+BLEConnection::BLEConnection(const char* deviceName, DeviceState& state, Mp3Player& mp3)
     : deviceName(deviceName),
       state(state),
+      mp3(mp3),
       server(nullptr),
       statusCharacteristic(nullptr),
       alarmConfigCharacteristic(nullptr),
@@ -300,6 +303,11 @@ void BLEConnection::sendAcknowledgement(
       static_cast<BLECharacteristic*>(acknowledgementCharacteristic);
   characteristic->setValue(payload.c_str());
   characteristic->notify();
+}
+
+void BLEConnection::acknowledgeCommand(
+    const char* commandId, bool accepted, const char* message) {
+  sendAcknowledgement(commandId, accepted, message);
 }
 
 void BLEConnection::refreshReadCharacteristics() {

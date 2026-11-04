@@ -4,11 +4,13 @@
 #include <WiFi.h>
 #include <time.h>
 
-class WiFiConnection{
+#include <Connections.h>
+
+class WiFiConnection : public Connections {
   public:
     WiFiConnection(const char* ssid, const char* password);
 
-    void begin();
+    void begin() override;
 
     void connect();
     void disconnect();
