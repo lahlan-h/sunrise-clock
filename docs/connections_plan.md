@@ -451,9 +451,13 @@ published on connect, after each applied command, and every 120 seconds.
 - [x] Verify that credentials are not committed.
 - [x] Choose and verify whether the broker uses TLS for the target deployment.
 
-The current target is plain MQTT on the trusted local lab network, so TLS was
-removed. Adding it later means swapping `WiFiClient` for `WiFiClientSecure`
-and calling `setCACert()`. The telemetry interval is `TELEMETRY_INTERVAL_MS`
+The firmware uses plain MQTT (no TLS) against the public broker
+`broker.emqx.io:1883`, with no username or password. Anyone can read and
+publish on a public broker, so `MQTT_DEVICE_ID` must be unique and hard to
+guess: it is both the topic namespace and the MQTT client ID, and a duplicate
+client ID makes the broker disconnect one of the two clients. TLS-only brokers
+such as EMQX Cloud Serverless (port 8883) will not work without bringing back
+`WiFiClientSecure`. The telemetry interval is `TELEMETRY_INTERVAL_MS`
 in `MQTTConnection.cpp`, not the secrets file.
 `secrets.h` is intentionally local-only and is excluded by `.gitignore`, as
 confirmed during implementation. A repository-history audit is still prudent

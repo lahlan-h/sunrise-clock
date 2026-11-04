@@ -43,6 +43,7 @@ MQTTConnection::MQTTConnection(
 void MQTTConnection::begin() {
   client.setServer(host, port);
   client.setBufferSize(BUFFER_SIZE);
+  client.setSocketTimeout(2); // PubSubClient's 15 s default freezes loop() whenever a broker drops the connection
   client.setCallback([this](char* topic, uint8_t* payload, unsigned int length) {
     if (commandTopic != topic) return;
     CommandResult result = router.submit(reinterpret_cast<const char*>(payload), length);
