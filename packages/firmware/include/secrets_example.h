@@ -15,7 +15,7 @@ const char* MQTT_DEVICE_ID = "sunrise-clock-01";
 const bool MQTT_USE_TLS = false;
 const char* MQTT_ROOT_CERTIFICATE = nullptr;// opportunity to add a root certificate for TLS if needed
 
-const char* INFLUX_HOST = "https://us-east-1-1.aws.cloud2.influxdata.com";
+const char* INFLUX_HOST = "https://eu-central-1-1.aws.cloud2.influxdata.com";
 const char* INFLUX_ORG = "";
 const char* INFLUX_BUCKET = "sunrise-clock-bucket";
 const char* INFLUX_API_TOKEN = "";

@@ -216,7 +216,7 @@ provide the network readiness required by `MQTTConnection`.
 
 Status: `Partial`. `MQTTConnection` exists with topic construction, Wi-Fi
 gating, reconnect backoff, command subscription, payload-size/protocol/range
-validation, command queuing, acknowledgements, and publish methods. It is
+validation, command queuing, and telemetry publishing. It is
 constructed and updated by `main.cpp`; application command routing and full
 Wi-Fi recovery remain incomplete.
 
@@ -410,24 +410,21 @@ MQTT command client
   -> MQTTConnection
   -> CommandRouter
   -> DeviceState / LightArray
-  -> sunrise-clock/{device_id}/command/ack
 ```
 
 Use a stable namespace such as:
 
 ```text
 sunrise-clock/{device_id}/telemetry
-sunrise-clock/{device_id}/state
 sunrise-clock/{device_id}/command
-sunrise-clock/{device_id}/command/ack
 ```
 
 The telemetry topic is for measurements and status. The command topic accepts
-the versioned `set_alarm` and `set_light` commands, which are queued by
-`MQTTConnection` and applied by `CommandRouter`. The acknowledgement topic
-reports transport-level parsing/queue results and application-level rejections.
-MQTT command handling must not be treated as a replacement for the local alarm
-state machine.
+the versioned `set_alarm` and `set_light` commands, which are validated and
+queued by `MQTTConnection` and applied by `CommandRouter`. MQTT command
+handling must not be treated as a replacement for the local alarm state
+machine. Command results are reflected in the next telemetry snapshot; BLE
+commands retain their existing acknowledgement and notification path.
 
 ## Telegraf, InfluxDB, and Grafana setup plan
 
@@ -561,8 +558,8 @@ the command.
 - [ ] Demonstrate live peripheral values over BLE.
 - [ ] Demonstrate the same meaningful values through MQTT, Telegraf, InfluxDB,
   and Grafana;
-- [ ] Demonstrate MQTT alarm and light commands through
-  `CommandRouter`, including acknowledgement and rejection cases;
+- [ ] Demonstrate MQTT alarm and light commands through `CommandRouter`,
+  including valid and rejected command cases;
 - [ ] Test Wi-Fi, broker, BLE, sensor, and cloud outages.
 - [ ] Verify local alarm/light behavior continues during global outages.
 - [ ] Verify duplicate, stale, malformed, and out-of-range commands are

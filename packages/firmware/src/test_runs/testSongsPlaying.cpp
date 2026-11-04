@@ -3,15 +3,15 @@
 #include <Arduino.h>
 
 #include "audio/Mp3Player.h"
-#include "input/DHTSensor.h"
 #include "input/PushButton.h"
 #include "input/RotaryEncoder.h"
 #include "light/LightArray.h"
 #include "screen/oledScreen.h"
+#include "sensor/DHTSensor.h"
 
 extern Mp3Player mp3;
 extern LightArray lights;
-extern DHTSensor dhtSensor;
+extern DHTSensor dht;
 
 namespace {
 
@@ -111,15 +111,15 @@ void testSongsPlayingUpdate() {
 
   lights.update();
 
-  dhtSensor.update();
+  dht.update();
 
   const unsigned long currentMillis = millis();
   if (currentMillis - lastSensorLogMillis >= sensorLogIntervalMillis) {
     lastSensorLogMillis = currentMillis;
     Serial.print("Temperature: ");
-    Serial.print(dhtSensor.getTemperature());
+    Serial.print(dht.getTemperature());
     Serial.print(" °C, Humidity: ");
-    Serial.print(dhtSensor.getHumidity());
+    Serial.print(dht.getHumidity());
     Serial.println(" %");
   }
 }
