@@ -479,8 +479,9 @@ published on important state changes and every 120 seconds by default.
 - [x] Choose and verify whether the broker uses TLS for the target deployment.
 
 The current target is plain MQTT on the trusted local lab network. The
-configuration retains `MQTT_USE_TLS` and `MQTT_ROOT_CERTIFICATE` so a later
-deployment can enable TLS without changing the MQTT class interface. The
+configuration uses a plain `WiFiClient` and MQTT port 1883 because the target
+deployment does not use TLS. Reintroducing TLS would require switching the
+client type and restoring certificate configuration. The
 telemetry interval is configured through
 `MQTTConnection::DEFAULT_TELEMETRY_INTERVAL_MS`, alongside the MQTT transport
 configuration rather than the secrets file.

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
-#include <WiFiClientSecure.h>
+#include <WiFiClient.h>
 #include <PubSubClient.h>
 
 #include <Connections.h>
@@ -22,9 +22,7 @@ class MQTTConnection : public Connections {
         uint16_t port,
         const char* username,
         const char* password,
-        const char* deviceId,
-        bool useTls = false,
-        const char* rootCertificate = nullptr);
+        const char* deviceId);
 
     void begin() override;
     void update() override;
@@ -49,9 +47,7 @@ class MQTTConnection : public Connections {
     const char* username;
     const char* password;
     const char* deviceId;
-    bool useTls;
-    const char* rootCertificate;
-    WiFiClientSecure networkClient;
+    WiFiClient networkClient;
     PubSubClient mqttClient;
     String clientId;
     String telemetryTopicName;

@@ -13,17 +13,13 @@ MQTTConnection::MQTTConnection(
     uint16_t port,
     const char* username,
     const char* password,
-    const char* deviceId,
-    bool useTls,
-    const char* rootCertificate)
+    const char* deviceId)
     : wifi(wifi),
       host(host),
       port(port),
       username(username),
       password(password),
       deviceId(deviceId),
-      useTls(useTls),
-      rootCertificate(rootCertificate),
       mqttClient(networkClient),
       clientId(String("sunrise-clock-") + (deviceId == nullptr ? "" : deviceId)),
       telemetryTopicName(String("sunrise-clock/") +
@@ -36,14 +32,6 @@ void MQTTConnection::begin() {
       deviceId[0] == '\0') {
     setError("invalid_mqtt_configuration");
     return;
-  }
-
-  if (useTls) {
-    if (rootCertificate == nullptr || rootCertificate[0] == '\0') {
-      setError("missing_mqtt_root_certificate");
-      return;
-    }
-    networkClient.setCACert(rootCertificate);
   }
 
   mqttClient.setServer(host, port);

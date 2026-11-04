@@ -39,9 +39,7 @@ MQTTConnection mqtt(
     MQTT_PORT,
     MQTT_USERNAME,
     MQTT_PASSWORD,
-    MQTT_DEVICE_ID,
-    MQTT_USE_TLS,
-    MQTT_ROOT_CERTIFICATE);
+    MQTT_DEVICE_ID);
 TelemetryPublisher telemetry(
     mqtt,
     deviceState,
