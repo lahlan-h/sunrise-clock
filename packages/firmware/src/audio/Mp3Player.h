@@ -13,7 +13,9 @@ class Mp3Player : public Peripheral{
     void play(uint16_t track);
     void playSong(uint8_t track);
     void playEffect(uint8_t effect);
+    void loopSong(uint8_t track);
     void pause();
+    void stop();
     void setVolume(uint8_t volume);
 
     uint8_t getTrackCount() const;
