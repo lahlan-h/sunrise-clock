@@ -7,7 +7,7 @@
 #include "WiFiConnection.h"
 
 namespace {
-const uint32_t TELEMETRY_INTERVAL_MS = 120000;
+const uint32_t TELEMETRY_INTERVAL_MS = 30000;
 const uint32_t MIN_RETRY_MS = 1000;
 const uint32_t MAX_RETRY_MS = 60000;
 const uint16_t BUFFER_SIZE = 768;  // Telemetry JSON + topic + MQTT header
