@@ -12,8 +12,6 @@ const uint16_t MQTT_PORT = 1883;
 const char* MQTT_USERNAME = "";
 const char* MQTT_PASSWORD = "";
 const char* MQTT_DEVICE_ID = "sunrise-clock-01";
-const bool MQTT_USE_TLS = false;
-const char* MQTT_ROOT_CERTIFICATE = nullptr;// opportunity to add a root certificate for TLS if needed
 
 const char* INFLUX_HOST = "https://eu-central-1-1.aws.cloud2.influxdata.com";
 const char* INFLUX_ORG = "";

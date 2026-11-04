@@ -20,6 +20,14 @@ float DHTSensor::getHumidity() const {
   return humidity;
 }
 
+bool DHTSensor::isTemperatureValid() const {
+  return std::isfinite(temperature);
+}
+
+bool DHTSensor::isHumidityValid() const {
+  return std::isfinite(humidity);
+}
+
 bool DHTSensor::isError() const {
-  return isnan(temperature) || isnan(humidity);
+  return !isTemperatureValid() || !isHumidityValid();
 }
