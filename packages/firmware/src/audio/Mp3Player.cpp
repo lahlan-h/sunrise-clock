@@ -41,6 +41,6 @@ uint8_t Mp3Player::getTrackCount() const {
 }
 
 const char* Mp3Player::getSongName(uint8_t trackIndex) const {
-  if (trackIndex < trackCount - 1 || trackIndex > trackCount - 1) return;
+  if (trackIndex < trackCount - 1 || trackIndex > trackCount - 1) return nullptr;
   return songNames[trackIndex];
 }
