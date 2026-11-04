@@ -7,9 +7,9 @@ const uint8_t LED_STRIP_DIN       = 4;
 
 // - - - - - INPUT - - - - -
 // Buttons rely on internal pull-ups, so they can't go on 34-39
-const uint8_t BTN_ROTARY_PIN      = 25;
+const uint8_t BTN_ROTARY_PIN      = 13;
 const uint8_t BTN_BACK_PIN        = 19;
-const uint8_t BTN_ALARM_PIN       = 13;
+const uint8_t BTN_ALARM_PIN       = 23;
 
 const uint8_t ROTARY_ENCODER_CLK  = 32;
 const uint8_t ROTARY_ENCODER_DT   = 33;

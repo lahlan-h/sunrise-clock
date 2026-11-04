@@ -7,7 +7,7 @@
 #include "WiFiConnection.h"
 
 namespace {
-const uint32_t TELEMETRY_INTERVAL_MS = 30000;
+const uint32_t TELEMETRY_INTERVAL_MS = 120000;
 const uint32_t MIN_RETRY_MS = 1000;
 const uint32_t MAX_RETRY_MS = 60000;
 const uint16_t BUFFER_SIZE = 768;  // Telemetry JSON + topic + MQTT header
@@ -43,7 +43,6 @@ MQTTConnection::MQTTConnection(
 void MQTTConnection::begin() {
   client.setServer(host, port);
   client.setBufferSize(BUFFER_SIZE);
-  client.setSocketTimeout(2); // PubSubClient's 15 s default freezes loop() whenever a broker drops the connection
   client.setCallback([this](char* topic, uint8_t* payload, unsigned int length) {
     if (commandTopic != topic) return;
     CommandResult result = router.submit(reinterpret_cast<const char*>(payload), length);
@@ -91,33 +90,33 @@ void MQTTConnection::publishState() {
   lastPublishMs = millis();
 
   JsonDocument doc;
-  doc["protocolVersion"] = CommandRouter::PROTOCOL_VERSION;
-  doc["deviceId"] = deviceId;
-  doc["firmwareVersion"] = state.firmwareVersion;
-  setReading(doc, "temperature", state.temperatureValid, state.temperature);
-  doc["temperatureValid"] = state.temperatureValid;
-  setReading(doc, "humidity", state.humidityValid, state.humidity);
-  doc["humidityValid"] = state.humidityValid;
-  doc["ambientLightPercent"] = state.ambientLightPercent;
-  doc["motionDetected"] = state.motionDetected;
-  doc["rotaryButtonPressed"] = state.rotaryButtonPressed;
-  doc["backButtonPressed"] = state.backButtonPressed;
-  doc["alarmButtonPressed"] = state.alarmButtonPressed;
-  doc["rotaryPositionSinceLastReset"] = state.rotaryPositionSinceLastReset;
-  doc["isAlarmSet"] = state.isAlarmSet;
-  doc["alarmHour"] = state.alarmHour;
-  doc["alarmMinute"] = state.alarmMinute;
-  doc["isLightOn"] = state.isLightOn;
-  doc["lightBrightnessPercent"] = state.lightBrightnessPercent;
-  doc["lightMode"] = lightModeName(state.lightMode);
-  doc["isSoundOn"] = state.isSoundOn;
+  doc["protocol_version"] = CommandRouter::PROTOCOL_VERSION;
+  doc["device_id"] = deviceId;
+  doc["firmware_version"] = state.firmwareVersion;
+  setReading(doc, "temperature_c", state.temperatureValid, state.temperature);
+  doc["temperature_valid"] = state.temperatureValid;
+  setReading(doc, "humidity_percent", state.humidityValid, state.humidity);
+  doc["humidity_valid"] = state.humidityValid;
+  doc["ambient_light_percent"] = state.ambientLightPercent;
+  doc["motion"] = state.motionDetected;
+  doc["rotary_button_pressed"] = state.rotaryButtonPressed;
+  doc["back_button_pressed"] = state.backButtonPressed;
+  doc["alarm_button_pressed"] = state.alarmButtonPressed;
+  doc["rotary_position"] = state.rotaryPositionSinceLastReset;
+  doc["alarm_enabled"] = state.isAlarmSet;
+  doc["alarm_hour"] = state.alarmHour;
+  doc["alarm_minute"] = state.alarmMinute;
+  doc["light_on"] = state.isLightOn;
+  doc["light_brightness_percent"] = state.lightBrightnessPercent;
+  doc["light_mode"] = lightModeName(state.lightMode);
+  doc["sound_on"] = state.isSoundOn;
   doc["volume"] = state.volume;
   doc["screen"] = screenName(state.screen);
-  doc["isWifiConnected"] = state.isWifiConnected;
-  doc["wifiRssi"] = state.wifiRssi;
-  doc["isBluetoothConnected"] = state.isBluetoothConnected;
-  doc["isTimeSynced"] = state.isTimeSynced;
-  doc["upTimeMs"] = state.upTimeMs;
+  doc["wifi_connected"] = state.isWifiConnected;
+  doc["wifi_rssi"] = state.wifiRssi;
+  doc["ble_connected"] = state.isBluetoothConnected;
+  doc["time_synced"] = state.isTimeSynced;
+  doc["uptime_ms"] = state.upTimeMs;
 
   char payload[BUFFER_SIZE];
   serializeJson(doc, payload, sizeof(payload));

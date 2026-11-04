@@ -2,12 +2,11 @@
   "folders": [
     { "name": "sunrise-clock", "path": "." },
     { "name": "firmware", "path": "packages/firmware" },
-    { "name": "server", "path": "packages/server" },
-    { "name": "prints", "path": "packages/prints" },
+    { "name": "server", "path": "packages/server" }
   ],
   "settings": {
     // Hide packages/ under the root entry so files don't appear twice.
     // Add any new package to "folders" above.
-    "files.exclude": { "packages": true },
-  },
+    "files.exclude": { "packages": true }
+  }
 }
